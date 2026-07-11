@@ -13,7 +13,7 @@ export const logoutUser = () => api.post("/users/logout");
 export const getMe = () => api.get<UserProfile>("/users/me").then(r => r.data);
 export const getUser = (id: number) => api.get<UserProfile>(`/users/${id}`).then(r => r.data);
 export const updateUser = (id: number, data: Partial<User>) =>
-  api.patch<User>(`/users/${id}`, data).then(r => r.data);
+  api.patch<UserProfile>(`/users/${id}`, data).then(r => r.data);
 
 export const getFoods = (search?: string) =>
   api.get<Food[]>("/foods/", { params: search ? { search } : {} }).then(r => r.data);

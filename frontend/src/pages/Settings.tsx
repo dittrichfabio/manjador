@@ -71,11 +71,45 @@ export default function Settings() {
         carbs_goal_g:   form.carbs_goal_g   ? parseFloat(form.carbs_goal_g)   : undefined,
         fat_goal_g:     form.fat_goal_g     ? parseFloat(form.fat_goal_g)     : undefined,
       });
-      setUser(updated as any);
+      setUser(updated);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch {
       setError("Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleComputeGoals = async () => {
+    if (!user) return;
+    setSaving(true);
+    setError("");
+    setSuccess(false);
+    try {
+      const updated = await updateUser(user.id, {
+        age:            form.age            ? parseInt(form.age)              : undefined,
+        weight_kg:      form.weight_kg      ? parseFloat(form.weight_kg)      : undefined,
+        height_cm:      form.height_cm      ? parseFloat(form.height_cm)      : undefined,
+        gender:         (form.gender        as Gender      | undefined)       || undefined,
+        activity_level: (form.activity_level as ActivityLevel | undefined)    || undefined,
+      });
+      setUser(updated);
+      if (updated.suggested_calories != null) {
+        setForm((p) => ({
+          ...p,
+          calorie_goal:   Math.round(updated.suggested_calories!).toString(),
+          protein_goal_g: Math.round(updated.suggested_protein_g!).toString(),
+          carbs_goal_g:   Math.round(updated.suggested_carbs_g!).toString(),
+          fat_goal_g:     Math.round(updated.suggested_fat_g!).toString(),
+        }));
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError("Please fill in your age, weight, height, gender and activity level to compute goals.");
+      }
+    } catch {
+      setError("Failed to compute goals.");
     } finally {
       setSaving(false);
     }
@@ -254,14 +288,24 @@ export default function Settings() {
           Settings saved successfully!
         </p>
       )}
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="btn-primary disabled:opacity-50"
-      >
-        <Save size={16} />
-        {saving ? "Saving..." : "Save Settings"}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-primary disabled:opacity-50"
+        >
+          <Save size={16} />
+          {saving ? "Saving..." : "Save Settings"}
+        </button>
+        <button
+          onClick={handleComputeGoals}
+          disabled={saving}
+          className="btn-secondary disabled:opacity-50"
+          title="Use your profile (age, weight, height, gender, activity) to compute BMR/TDEE and suggested macro goals"
+        >
+          {saving ? "Computing..." : "Compute Suggested Goals"}
+        </button>
+      </div>
 
       {/* Export section */}
       <div className="card space-y-4">

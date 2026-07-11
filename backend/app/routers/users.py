@@ -81,7 +81,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     })
 
 
-@router.patch("/{user_id}", response_model=UserOut)
+@router.patch("/{user_id}", response_model=UserProfile)
 def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -90,7 +90,15 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
         setattr(user, field, value)
     db.commit()
     db.refresh(user)
-    return user
+    goals = get_user_goals(user)
+    return UserProfile(**UserOut.model_validate(user).model_dump(), **{
+        "computed_bmr": goals["computed_bmr"],
+        "computed_tdee": goals["computed_tdee"],
+        "suggested_calories": goals["suggested_calories"],
+        "suggested_protein_g": goals["suggested_protein_g"],
+        "suggested_carbs_g": goals["suggested_carbs_g"],
+        "suggested_fat_g": goals["suggested_fat_g"],
+    })
 
 
 @router.delete("/{user_id}", status_code=204)
