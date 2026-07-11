@@ -1,0 +1,32 @@
+[project]
+name = "manjador-backend"
+version = "0.1.0"
+description = "Manjador - Personal meal planning and nutrition tracking app"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13.1",
+    "pydantic>=2.7.1",
+    "pydantic-settings>=2.2.1",
+    "python-multipart>=0.0.9",
+    "Pillow>=10.3.0",
+    "google-generativeai>=0.7.0",
+    "python-jose[cryptography]>=3.3.0",
+    "itsdangerous>=2.2.0",
+    "aiofiles>=23.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2.0",
+    "httpx>=0.27.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
