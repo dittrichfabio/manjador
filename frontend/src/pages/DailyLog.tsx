@@ -266,7 +266,7 @@ export default function DailyLog() {
                       <span className="text-gray-400 ml-1 text-xs">({food.brand})</span>
                     )}
                     <span className="text-gray-400 ml-2 text-xs">
-                      {Math.round(food.calories_per_100g)} kcal/100g
+                      {Math.round(food.calories_per_serving)} kcal/{food.serving_size}{food.serving_unit}
                     </span>
                   </button>
                 ))}
@@ -292,7 +292,7 @@ export default function DailyLog() {
                     />
                     <span className="text-xs text-gray-400 w-4">g</span>
                     <span className="text-xs text-gray-400 w-16 text-right shrink-0">
-                      {Math.round((e.food.calories_per_100g * e.amount_g) / 100)} kcal
+                      {Math.round((e.food.calories_per_serving * e.amount_g) / (e.food.serving_size || 100))} kcal
                     </span>
                     <button
                       onClick={() => removeEntry(e.food.id)}

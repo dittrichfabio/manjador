@@ -8,12 +8,13 @@ class FoodBase(BaseModel):
     brand: Optional[str] = None
     serving_size: float = 100.0
     serving_unit: str = "g"
-    calories_per_100g: float
-    protein_per_100g: float = 0.0
-    carbs_per_100g: float = 0.0
-    fat_per_100g: float = 0.0
-    fiber_per_100g: Optional[float] = None
-    sugar_per_100g: Optional[float] = None
+    calories_per_serving: float
+    protein_per_serving: float = 0.0
+    carbs_per_serving: float = 0.0
+    fat_per_serving: float = 0.0
+    fiber_per_serving: Optional[float] = None   # null = unknown, treated as 0
+    sugar_per_serving: Optional[float] = None   # null = unknown, treated as 0
+    iron_per_serving: Optional[float] = None    # mg; null = unknown, treated as 0
 
 
 class FoodCreate(FoodBase):
@@ -25,12 +26,13 @@ class FoodUpdate(BaseModel):
     brand: Optional[str] = None
     serving_size: Optional[float] = None
     serving_unit: Optional[str] = None
-    calories_per_100g: Optional[float] = None
-    protein_per_100g: Optional[float] = None
-    carbs_per_100g: Optional[float] = None
-    fat_per_100g: Optional[float] = None
-    fiber_per_100g: Optional[float] = None
-    sugar_per_100g: Optional[float] = None
+    calories_per_serving: Optional[float] = None
+    protein_per_serving: Optional[float] = None
+    carbs_per_serving: Optional[float] = None
+    fat_per_serving: Optional[float] = None
+    fiber_per_serving: Optional[float] = None
+    sugar_per_serving: Optional[float] = None
+    iron_per_serving: Optional[float] = None
     is_verified: Optional[bool] = None
 
 
@@ -43,7 +45,7 @@ class FoodOut(FoodBase):
     model_config = {"from_attributes": True}
 
 
-class FoodNutritionPerServing(BaseModel):
+class FoodNutritionForAmount(BaseModel):
     food_id: int
     name: str
     amount_g: float
@@ -53,3 +55,4 @@ class FoodNutritionPerServing(BaseModel):
     fat_g: float
     fiber_g: Optional[float] = None
     sugar_g: Optional[float] = None
+    iron_mg: Optional[float] = None

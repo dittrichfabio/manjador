@@ -9,13 +9,13 @@ type FormState = Omit<Food, "id" | "created_by" | "created_at" | "is_verified">;
 
 const BLANK: FormState = {
   name: "", brand: "", serving_size: 100, serving_unit: "g",
-  calories_per_100g: 0, protein_per_100g: 0, carbs_per_100g: 0, fat_per_100g: 0,
-  fiber_per_100g: undefined, sugar_per_100g: undefined,
+  calories_per_serving: 0, protein_per_serving: 0, carbs_per_serving: 0, fat_per_serving: 0,
+  fiber_per_serving: undefined, sugar_per_serving: undefined, iron_per_serving: undefined,
 };
 
 const NUM_FIELDS = [
-  "serving_size","calories_per_100g","protein_per_100g",
-  "carbs_per_100g","fat_per_100g","fiber_per_100g","sugar_per_100g",
+  "serving_size","calories_per_serving","protein_per_serving",
+  "carbs_per_serving","fat_per_serving","fiber_per_serving","sugar_per_serving","iron_per_serving",
 ];
 
 export default function FoodDatabase() {
@@ -28,7 +28,8 @@ export default function FoodDatabase() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const photoRef = useRef<HTMLInputElement>(null);
+  const labelRef = useRef<HTMLInputElement>(null);
+  const foodPhotoRef = useRef<HTMLInputElement>(null);
 
   const load = (q?: string) => {
     setLoading(true);
@@ -56,9 +57,10 @@ export default function FoodDatabase() {
     setForm({
       name: food.name, brand: food.brand || "",
       serving_size: food.serving_size, serving_unit: food.serving_unit,
-      calories_per_100g: food.calories_per_100g, protein_per_100g: food.protein_per_100g,
-      carbs_per_100g: food.carbs_per_100g, fat_per_100g: food.fat_per_100g,
-      fiber_per_100g: food.fiber_per_100g, sugar_per_100g: food.sugar_per_100g,
+      calories_per_serving: food.calories_per_serving, protein_per_serving: food.protein_per_serving,
+      carbs_per_serving: food.carbs_per_serving, fat_per_serving: food.fat_per_serving,
+      fiber_per_serving: food.fiber_per_serving, sugar_per_serving: food.sugar_per_serving,
+      iron_per_serving: food.iron_per_serving,
     });
     setError("");
     setShowForm(true);
@@ -100,30 +102,33 @@ export default function FoodDatabase() {
     load(search || undefined);
   };
 
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>, mode: "label" | "food") => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     setError("");
     try {
-      const food = await uploadFoodPhoto(file);
+      const food = await uploadFoodPhoto(file, mode);
       openEdit(food);
       load(search || undefined);
-    } catch {
-      setError("Photo extraction failed. Please enter nutrition info manually.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setError(detail ? `Photo extraction failed: ${detail}` : "Photo extraction failed. Please enter nutrition info manually.");
     } finally {
       setUploading(false);
-      if (photoRef.current) photoRef.current.value = "";
+      if (labelRef.current) labelRef.current.value = "";
+      if (foodPhotoRef.current) foodPhotoRef.current.value = "";
     }
   };
 
   const MACRO_FIELDS: [string, string, string][] = [
-    ["Calories / 100g", "calories_per_100g", "kcal"],
-    ["Protein / 100g",  "protein_per_100g",  "g"],
-    ["Carbs / 100g",    "carbs_per_100g",    "g"],
-    ["Fat / 100g",      "fat_per_100g",      "g"],
-    ["Fiber / 100g",    "fiber_per_100g",    "g"],
-    ["Sugar / 100g",    "sugar_per_100g",    "g"],
+    ["Calories / serving", "calories_per_serving", "kcal"],
+    ["Protein / serving",  "protein_per_serving",  "g"],
+    ["Carbs / serving",    "carbs_per_serving",    "g"],
+    ["Fat / serving",      "fat_per_serving",      "g"],
+    ["Fiber / serving",    "fiber_per_serving",    "g"],
+    ["Sugar / serving",    "sugar_per_serving",    "g"],
+    ["Iron / serving",     "iron_per_serving",     "mg"],
   ];
 
   return (
@@ -133,25 +138,52 @@ export default function FoodDatabase() {
         <h2 className="text-2xl font-bold">Food Database</h2>
         <div className="flex gap-2 shrink-0">
           <button
-            onClick={() => photoRef.current?.click()}
+            onClick={() => labelRef.current?.click()}
             disabled={uploading}
+            title="Photo of a nutrition facts label — reads exact values"
             className="btn-secondary disabled:opacity-50"
           >
             <Upload size={15} />
-            {uploading ? "Reading..." : "Photo"}
+            {uploading ? "Reading..." : "Scan Label"}
+          </button>
+          <button
+            onClick={() => foodPhotoRef.current?.click()}
+            disabled={uploading}
+            title="Photo of the food — estimates typical values"
+            className="btn-secondary disabled:opacity-50"
+          >
+            <Upload size={15} />
+            {uploading ? "Reading..." : "Food Photo"}
           </button>
           <input
-            ref={photoRef}
+            ref={labelRef}
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={handlePhoto}
+            onChange={(e) => handlePhoto(e, "label")}
+          />
+          <input
+            ref={foodPhotoRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handlePhoto(e, "food")}
           />
           <button onClick={openNew} className="btn-primary">
             <Plus size={15} /> Add Food
           </button>
         </div>
       </div>
+
+      {/* Top-level error (e.g. photo upload failure) */}
+      {error && !showForm && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError("")} className="text-red-400 hover:text-red-600">
+            <X size={15} />
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -269,11 +301,12 @@ export default function FoodDatabase() {
                   )}
                 </div>
                 <div className="text-xs text-gray-400 mt-0.5 flex flex-wrap gap-3">
-                  <span>{Math.round(food.calories_per_100g)} kcal</span>
-                  <span>P: {food.protein_per_100g}g</span>
-                  <span>C: {food.carbs_per_100g}g</span>
-                  <span>F: {food.fat_per_100g}g</span>
-                  <span className="text-gray-300">/ 100g</span>
+                  <span>{Math.round(food.calories_per_serving)} kcal</span>
+                  <span>P: {food.protein_per_serving}g</span>
+                  <span>C: {food.carbs_per_serving}g</span>
+                  <span>F: {food.fat_per_serving}g</span>
+                  {food.iron_per_serving != null && <span>Fe: {food.iron_per_serving}mg</span>}
+                  <span className="text-gray-300">/ {food.serving_size}{food.serving_unit}</span>
                 </div>
               </div>
 

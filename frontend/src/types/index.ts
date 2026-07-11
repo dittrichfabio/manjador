@@ -37,12 +37,14 @@ export interface Food {
   brand?: string;
   serving_size: number;
   serving_unit: string;
-  calories_per_100g: number;
-  protein_per_100g: number;
-  carbs_per_100g: number;
-  fat_per_100g: number;
-  fiber_per_100g?: number;
-  sugar_per_100g?: number;
+  /** All nutrient values are per serving_size */
+  calories_per_serving: number;
+  protein_per_serving: number;
+  carbs_per_serving: number;
+  fat_per_serving: number;
+  fiber_per_serving?: number;  // null = unknown (treated as 0)
+  sugar_per_serving?: number;  // null = unknown (treated as 0)
+  iron_per_serving?: number;   // mg; null = unknown (treated as 0)
   created_by?: number;
   created_at: string;
   is_verified: boolean;

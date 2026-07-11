@@ -1,73 +1,86 @@
+import io
 import json
+import logging
 import re
-import base64
 from pathlib import Path
-from typing import Optional
-import google.generativeai as genai
+from PIL import Image
+from google import genai
+from google.genai import types
 from app.config import settings
 
-_PROMPT = (
-    "Analyze this food image and extract nutritional information.\n"
-    "Respond ONLY with a valid JSON object (no markdown, no extra text) in this exact format:\n\n"
-    '{\n'
-    '  "name": "Food name",\n'
-    '  "brand": "Brand name or null",\n'
-    '  "serving_size": 100,\n'
-    '  "serving_unit": "g",\n'
-    '  "calories_per_100g": 250.0,\n'
-    '  "protein_per_100g": 10.0,\n'
-    '  "carbs_per_100g": 30.0,\n'
-    '  "fat_per_100g": 8.0,\n'
-    '  "fiber_per_100g": 2.0,\n'
-    '  "sugar_per_100g": 5.0\n'
-    '}\n\n'
-    "Rules:\n"
-    "- All numeric values must be per 100g (convert if the label shows per serving)\n"
-    "- Use null for fields you cannot determine\n"
-    '- serving_unit should be "g" or "ml"\n'
-    "- Be conservative with estimates; prefer underestimating to overestimating\n"
-)
+logger = logging.getLogger(__name__)
+
+_PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+# Max pixel dimension before the image is downscaled (keeps token usage low)
+_MAX_PX = 1024
 
 
-def _get_model():
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _load_prompt(mode: str) -> str:
+    """Load prompt text from prompts/<mode>.txt at import time."""
+    path = _PROMPTS_DIR / f"{mode}.txt"
+    if not path.exists():
+        raise FileNotFoundError(f"Prompt file not found: {path}")
+    return path.read_text(encoding="utf-8")
+
+
+def _get_client() -> genai.Client:
     if not settings.gemini_api_key:
-        raise ValueError(
-            "GEMINI_API_KEY is not set. Add it to your .env file."
-        )
-    genai.configure(api_key=settings.gemini_api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
+        raise ValueError("GEMINI_API_KEY is not set. Add it to your .env file.")
+    return genai.Client(api_key=settings.gemini_api_key)
 
 
-async def extract_nutrition_from_image(image_path: str) -> dict:
-    model = _get_model()
+def _resize_image(path: str) -> tuple[bytes, str]:
+    """
+    Resize so neither dimension exceeds _MAX_PX, encode as JPEG.
+    Returns (jpeg_bytes, "image/jpeg").
+    """
+    with Image.open(path) as img:
+        img = img.convert("RGB")  # normalise (handles RGBA, palette, HEIC, etc.)
+        w, h = img.size
+        if max(w, h) > _MAX_PX:
+            ratio = _MAX_PX / max(w, h)
+            img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
+            logger.debug("Resized image from %dx%d to %dx%d", w, h, img.size[0], img.size[1])
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85, optimize=True)
+        return buf.getvalue(), "image/jpeg"
 
-    image_data = Path(image_path).read_bytes()
-    b64 = base64.b64encode(image_data).decode()
-    mime_type = _detect_mime(image_path)
 
-    response = model.generate_content([
-        {"mime_type": mime_type, "data": b64},
-        _PROMPT,
-    ])
-
-    raw = response.text.strip()
+def _parse_response(raw: str) -> dict:
+    raw = raw.strip()
     raw = re.sub(r"^```[a-z]*\n?", "", raw)
     raw = re.sub(r"\n?```$", "", raw)
-
     try:
-        data = json.loads(raw)
+        return json.loads(raw)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Gemini returned unparseable response: {raw!r}") from e
-
-    return data
+        raise ValueError(f"Gemini returned unparseable JSON: {raw!r}") from e
 
 
-def _detect_mime(path: str) -> str:
-    ext = Path(path).suffix.lower()
-    return {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-        ".heic": "image/heic",
-    }.get(ext, "image/jpeg")
+# ── Public API ─────────────────────────────────────────────────────────────────
+
+async def extract_nutrition_from_image(image_path: str, mode: str = "label") -> dict:
+    """
+    mode="label"  (default) – photo of a nutrition facts label; reads exact values.
+    mode="food"              – photo of food/dish; estimates typical values.
+
+    Prompts are loaded from app/services/prompts/<mode>.txt so you can edit them
+    without touching the Python code.
+    """
+    client = _get_client()
+    prompt = _load_prompt(mode)
+
+    image_data, mime_type = _resize_image(image_path)
+    logger.info("Sending %d bytes to Gemini (model=%s, mode=%s)", len(image_data), settings.gemini_model, mode)
+
+    response = client.models.generate_content(
+        model=settings.gemini_model,
+        contents=[
+            types.Part.from_bytes(data=image_data, mime_type=mime_type),
+            prompt,
+        ],
+    )
+
+    return _parse_response(response.text)

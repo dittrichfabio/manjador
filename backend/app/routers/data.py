@@ -130,12 +130,13 @@ def export_nutrition(
                 "fat_g": nutrition["fat_g"],
                 "fiber_g": nutrition.get("fiber_g", ""),
                 "sugar_g": nutrition.get("sugar_g", ""),
+                "iron_mg": nutrition.get("iron_mg", ""),
             })
 
     empty_row = {
         "date": "", "meal_category": "", "food_name": "", "food_brand": "",
         "amount_g": "", "calories": "", "protein_g": "", "carbs_g": "",
-        "fat_g": "", "fiber_g": "", "sugar_g": "",
+        "fat_g": "", "fiber_g": "", "sugar_g": "", "iron_mg": "",
     }
     return _csv_response(rows or [empty_row], "nutrition.csv")
 
@@ -208,17 +209,22 @@ async def import_foods(
     created = 0
     for row in reader:
         try:
+            def _opt_col(key: str) -> float | None:
+                v = row.get(key, "").strip()
+                return float(v) if v else None
+
             food = Food(
                 name=row["name"].strip(),
                 brand=row.get("brand", "").strip() or None,
                 serving_size=float(row.get("serving_size", 100) or 100),
                 serving_unit=row.get("serving_unit", "g").strip() or "g",
-                calories_per_100g=float(row["calories_per_100g"]),
-                protein_per_100g=float(row.get("protein_per_100g") or 0),
-                carbs_per_100g=float(row.get("carbs_per_100g") or 0),
-                fat_per_100g=float(row.get("fat_per_100g") or 0),
-                fiber_per_100g=float(row["fiber_per_100g"]) if row.get("fiber_per_100g", "").strip() else None,
-                sugar_per_100g=float(row["sugar_per_100g"]) if row.get("sugar_per_100g", "").strip() else None,
+                calories_per_serving=float(row["calories_per_serving"]),
+                protein_per_serving=float(row.get("protein_per_serving") or 0),
+                carbs_per_serving=float(row.get("carbs_per_serving") or 0),
+                fat_per_serving=float(row.get("fat_per_serving") or 0),
+                fiber_per_serving=_opt_col("fiber_per_serving"),
+                sugar_per_serving=_opt_col("sugar_per_serving"),
+                iron_per_serving=_opt_col("iron_per_serving"),
                 created_by=user_id,
             )
             db.add(food)

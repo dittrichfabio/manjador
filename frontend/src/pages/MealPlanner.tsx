@@ -303,7 +303,7 @@ export default function MealPlanner() {
                           >
                             <span>{food.name}</span>
                             <span className="text-gray-400">
-                              {Math.round(food.calories_per_100g)} kcal/100g
+                              {Math.round(food.calories_per_serving)} kcal/{food.serving_size}{food.serving_unit}
                             </span>
                           </div>
                         ))}

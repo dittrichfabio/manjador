@@ -1,0 +1,27 @@
+This is a photo of a food item or dish.
+Identify what it is and ESTIMATE its typical nutritional values for a standard serving.
+
+Respond ONLY with a valid JSON object (no markdown, no extra text):
+
+{
+  "name": "Food name",
+  "brand": null,
+  "serving_size": 100,
+  "serving_unit": "g",
+  "calories_per_serving": 250.0,
+  "protein_per_serving": 10.0,
+  "carbs_per_serving": 30.0,
+  "fat_per_serving": 8.0,
+  "fiber_per_serving": 2.0,
+  "sugar_per_serving": 5.0,
+  "iron_per_serving": null
+}
+
+Rules:
+- serving_size: use a typical serving size for this food (e.g. 100g, 150g, 1 cup)
+- serving_unit: "g" or "ml"
+- All nutrient values must be PER SERVING (the serving_size defined above)
+- These are ESTIMATES — be conservative and prefer underestimating calories
+- iron_per_serving: value in mg; use null if you cannot estimate it reliably
+- Use null for any nutrient you genuinely cannot estimate (it will be treated as 0 in calculations)
+- Do not add any fields not listed in the JSON template above

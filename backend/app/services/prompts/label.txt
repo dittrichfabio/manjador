@@ -1,0 +1,26 @@
+This is a photo of a NUTRITION FACTS LABEL.
+Read the exact values printed on the label — do NOT estimate or infer anything.
+
+Respond ONLY with a valid JSON object (no markdown, no extra text):
+
+{
+  "name": "Product name from the package",
+  "brand": "Brand name or null",
+  "serving_size": 44,
+  "serving_unit": "g",
+  "calories_per_serving": 150.0,
+  "protein_per_serving": 5.0,
+  "carbs_per_serving": 20.0,
+  "fat_per_serving": 4.0,
+  "fiber_per_serving": 2.0,
+  "sugar_per_serving": 5.0,
+  "iron_per_serving": 2.5
+}
+
+Rules:
+- serving_size: use the EXACT serving size printed on the label (e.g. 44, NOT 100)
+- serving_unit: use the EXACT unit from the label ("g" or "ml")
+- All nutrient values must be PER SERVING (the serving_size defined above) — do NOT convert to per 100g
+- iron_per_serving: value in mg (e.g. if label says "Iron 8mg", use 8.0); use null if iron is not listed
+- Use null for any nutrient field not present on the label (it will be treated as 0 in calculations)
+- Do not add any fields not listed in the JSON template above

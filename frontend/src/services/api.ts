@@ -22,10 +22,10 @@ export const createFood = (data: Omit<Food, "id" | "created_by" | "created_at" |
 export const updateFood = (id: number, data: Partial<Food>) =>
   api.patch<Food>(`/foods/${id}`, data).then(r => r.data);
 export const deleteFood = (id: number) => api.delete(`/foods/${id}`);
-export const uploadFoodPhoto = (file: File) => {
+export const uploadFoodPhoto = (file: File, mode: "label" | "food" = "label") => {
   const form = new FormData();
   form.append("file", file);
-  return api.post<Food>("/foods/upload-photo", form, {
+  return api.post<Food>(`/foods/upload-photo?mode=${mode}`, form, {
     headers: { "Content-Type": "multipart/form-data" },
   }).then(r => r.data);
 };

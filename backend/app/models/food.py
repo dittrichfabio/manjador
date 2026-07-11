@@ -12,17 +12,18 @@ class Food(Base):
     name = Column(String, nullable=False, index=True)
     brand = Column(String, nullable=True)
 
-    # Serving info
-    serving_size = Column(Float, default=100.0)       # default: per 100g
+    # Serving info — all nutrient values are per this serving
+    serving_size = Column(Float, default=100.0)
     serving_unit = Column(String, default="g")
 
-    # Nutrition per 100g
-    calories_per_100g = Column(Float, nullable=False)
-    protein_per_100g = Column(Float, default=0.0)
-    carbs_per_100g = Column(Float, default=0.0)
-    fat_per_100g = Column(Float, default=0.0)
-    fiber_per_100g = Column(Float, nullable=True)
-    sugar_per_100g = Column(Float, nullable=True)
+    # Nutrition per serving
+    calories_per_serving = Column(Float, nullable=False)
+    protein_per_serving = Column(Float, default=0.0)
+    carbs_per_serving = Column(Float, default=0.0)
+    fat_per_serving = Column(Float, default=0.0)
+    fiber_per_serving = Column(Float, nullable=True)   # null = unknown
+    sugar_per_serving = Column(Float, nullable=True)   # null = unknown
+    iron_per_serving = Column(Float, nullable=True)    # mg; null = unknown
 
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

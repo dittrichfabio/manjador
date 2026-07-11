@@ -1,8 +1,81 @@
+import logging
+import sqlite3
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app.routers import users, weights, measurements, foods, meals, plans, data
+
+logger = logging.getLogger(__name__)
+
+
+def _migrate_foods_table():
+    """
+    One-time migration: rename *_per_100g columns to *_per_serving and add iron.
+    Uses table-recreation because SQLite has limited ALTER TABLE support.
+    Safe to run on every startup — skipped if already migrated.
+    """
+    from app.config import settings
+
+    db_path = settings.database_url.replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
+    try:
+        info = conn.execute("PRAGMA table_info(foods)").fetchall()
+        if not info:
+            return  # table doesn't exist yet, create_all will handle it
+        columns = {row[1] for row in info}
+        if "calories_per_100g" not in columns:
+            return  # already migrated
+
+        logger.info("Migrating foods table: renaming _per_100g → _per_serving, adding iron")
+        conn.executescript("""
+            BEGIN;
+
+            CREATE TABLE foods_new (
+                id          INTEGER PRIMARY KEY,
+                name        VARCHAR NOT NULL,
+                brand       VARCHAR,
+                serving_size FLOAT DEFAULT 100.0,
+                serving_unit VARCHAR DEFAULT 'g',
+                calories_per_serving FLOAT NOT NULL,
+                protein_per_serving  FLOAT DEFAULT 0.0,
+                carbs_per_serving    FLOAT DEFAULT 0.0,
+                fat_per_serving      FLOAT DEFAULT 0.0,
+                fiber_per_serving    FLOAT,
+                sugar_per_serving    FLOAT,
+                iron_per_serving     FLOAT,
+                created_by  INTEGER REFERENCES users(id),
+                created_at  DATETIME,
+                is_verified BOOLEAN DEFAULT 0
+            );
+
+            INSERT INTO foods_new (
+                id, name, brand, serving_size, serving_unit,
+                calories_per_serving, protein_per_serving, carbs_per_serving,
+                fat_per_serving, fiber_per_serving, sugar_per_serving,
+                iron_per_serving, created_by, created_at, is_verified
+            )
+            SELECT
+                id, name, brand, serving_size, serving_unit,
+                calories_per_100g, protein_per_100g, carbs_per_100g,
+                fat_per_100g, fiber_per_100g, sugar_per_100g,
+                NULL, created_by, created_at, is_verified
+            FROM foods;
+
+            DROP TABLE foods;
+            ALTER TABLE foods_new RENAME TO foods;
+            CREATE INDEX IF NOT EXISTS ix_foods_id   ON foods(id);
+            CREATE INDEX IF NOT EXISTS ix_foods_name ON foods(name);
+
+            COMMIT;
+        """)
+        logger.info("Foods table migration complete")
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 # ---------------------------------------------------------------------------
 # App factory
@@ -50,6 +123,8 @@ app.include_router(data.router, prefix="/api")
 
 @app.on_event("startup")
 def startup_event():
+    # Migrate existing schema if needed (rename _per_100g → _per_serving, add iron)
+    _migrate_foods_table()
     # Create all tables if they do not exist yet
     Base.metadata.create_all(bind=engine)
 

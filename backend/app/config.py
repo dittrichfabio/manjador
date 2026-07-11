@@ -5,6 +5,7 @@ from pathlib import Path
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/manjador.db"
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.5-flash"
     secret_key: str = "change-me-in-production-use-a-long-random-string"
     session_max_age: int = 60 * 60 * 24 * 30  # 30 days
 

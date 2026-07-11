@@ -1,9 +1,12 @@
+import logging
 import os
 import shutil
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Cookie
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models.food import Food
@@ -45,10 +48,15 @@ def create_food(
 @router.post("/upload-photo", response_model=FoodOut, status_code=201)
 async def upload_food_photo(
     file: UploadFile = File(...),
+    mode: str = Query(default="label", pattern="^(label|food)$"),
     user_id: Optional[str] = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
-    """Upload a food photo and extract nutrition data via Gemini AI."""
+    """Upload a food photo and extract nutrition data via Gemini AI.
+
+    mode=label  (default) – photo of a nutrition facts label; reads exact values.
+    mode=food             – photo of the food itself; estimates typical values.
+    """
     from app.services.gemini import extract_nutrition_from_image
 
     # Save the uploaded file temporarily
@@ -63,23 +71,38 @@ async def upload_food_photo(
             shutil.copyfileobj(file.file, buf)
 
         # Extract nutrition data from the image
-        nutrition_data = await extract_nutrition_from_image(tmp_path)
+        try:
+            nutrition_data = await extract_nutrition_from_image(tmp_path, mode=mode)
+        except ValueError as exc:
+            logger.error("Gemini response parse error: %s", exc)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.error("Gemini API error: %s", exc, exc_info=True)
+            raise HTTPException(
+                status_code=503,
+                detail=f"Gemini API error: {exc}",
+            ) from exc
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+    def _opt(key: str) -> float | None:
+        v = nutrition_data.get(key)
+        return float(v) if v is not None else None
 
     # Build the food entry from Gemini response
     food = Food(
         name=nutrition_data.get("name", "Unknown Food"),
         brand=nutrition_data.get("brand"),
-        serving_size=nutrition_data.get("serving_size", 100.0),
+        serving_size=float(nutrition_data.get("serving_size") or 100.0),
         serving_unit=nutrition_data.get("serving_unit", "g"),
-        calories_per_100g=float(nutrition_data.get("calories_per_100g", 0)),
-        protein_per_100g=float(nutrition_data.get("protein_per_100g") or 0),
-        carbs_per_100g=float(nutrition_data.get("carbs_per_100g") or 0),
-        fat_per_100g=float(nutrition_data.get("fat_per_100g") or 0),
-        fiber_per_100g=float(nutrition_data["fiber_per_100g"]) if nutrition_data.get("fiber_per_100g") is not None else None,
-        sugar_per_100g=float(nutrition_data["sugar_per_100g"]) if nutrition_data.get("sugar_per_100g") is not None else None,
+        calories_per_serving=float(nutrition_data.get("calories_per_serving") or 0),
+        protein_per_serving=float(nutrition_data.get("protein_per_serving") or 0),
+        carbs_per_serving=float(nutrition_data.get("carbs_per_serving") or 0),
+        fat_per_serving=float(nutrition_data.get("fat_per_serving") or 0),
+        fiber_per_serving=_opt("fiber_per_serving"),
+        sugar_per_serving=_opt("sugar_per_serving"),
+        iron_per_serving=_opt("iron_per_serving"),
         created_by=int(user_id) if user_id else None,
     )
     db.add(food)
