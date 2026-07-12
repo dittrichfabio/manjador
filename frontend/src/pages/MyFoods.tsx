@@ -496,9 +496,12 @@ export default function MyFoods() {
       ) : (
         <div className="space-y-2">
           {filtered.map((uf) => {
-            const pairingCount = pairings.filter(
+            const myPairings = pairings.filter(
               (p) => p.food_a_id === uf.food_id || p.food_b_id === uf.food_id
-            ).length;
+            );
+            const pairedFoods = myPairings.map((p) =>
+              p.food_a_id === uf.food_id ? p.food_b : p.food_a
+            );
             return (
               <div key={uf.id} className="card flex items-start gap-3">
                 <div className="flex-1 min-w-0">
@@ -521,6 +524,25 @@ export default function MyFoods() {
                       ))}
                     </div>
                   )}
+                  {/* Paired foods */}
+                  {pairedFoods.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                        <Link2 size={11} />
+                        <span>Pairs with:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {pairedFoods.map((food) => (
+                          <span
+                            key={food.id}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700"
+                          >
+                            {food.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -531,13 +553,13 @@ export default function MyFoods() {
                     title="Manage pairings"
                     className={[
                       "flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                      pairingCount > 0
+                      myPairings.length > 0
                         ? "bg-primary-50 text-primary-700 hover:bg-primary-100"
                         : "text-gray-400 hover:bg-gray-100 hover:text-gray-600",
                     ].join(" ")}
                   >
                     <Link2 size={13} />
-                    {pairingCount > 0 && <span>{pairingCount}</span>}
+                    {myPairings.length > 0 && <span>{myPairings.length}</span>}
                   </button>
 
                   {/* Edit categories button */}
