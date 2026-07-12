@@ -347,6 +347,7 @@ export default function MyFoods() {
   const [pairings, setPairings] = useState<FoodPairing[]>([]);
   const [categories, setCategories] = useState<MealCategory[]>([]);
   const [search, setSearch] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
@@ -367,10 +368,17 @@ export default function MyFoods() {
   }, [user?.id, reloadTrigger]);
   useEffect(() => { getMealCategories().then(setCategories).catch(() => {}); }, []);
 
-  const filtered = myFoods.filter((uf) =>
-    uf.food.name.toLowerCase().includes(search.toLowerCase()) ||
-    (uf.food.brand ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = myFoods.filter((uf) => {
+    const matchesSearch =
+      uf.food.name.toLowerCase().includes(search.toLowerCase()) ||
+      (uf.food.brand ?? "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesCategory =
+      selectedCategoryIds.length === 0 ||
+      uf.meal_categories.some((cat) => selectedCategoryIds.includes(cat.id));
+
+    return matchesSearch && matchesCategory;
+  });
 
   const handleAdd = async (foodId: number, categoryIds: number[]) => {
     if (!user) return;
@@ -425,17 +433,63 @@ export default function MyFoods() {
         />
       </div>
 
+      {/* Category filters */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCategoryIds([])}
+            className={[
+              "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+              selectedCategoryIds.length === 0
+                ? "bg-gray-800 text-white border-gray-800"
+                : "bg-white text-gray-600 border-gray-300 hover:border-gray-400",
+            ].join(" ")}
+          >
+            All
+          </button>
+          {categories.map((cat) => {
+            const isSelected = selectedCategoryIds.includes(cat.id);
+            return (
+              <button
+                key={cat.id}
+                onClick={() =>
+                  setSelectedCategoryIds((prev) =>
+                    isSelected ? prev.filter((id) => id !== cat.id) : [...prev, cat.id]
+                  )
+                }
+                className={[
+                  "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                  isSelected
+                    ? "text-white border-transparent"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400",
+                ].join(" ")}
+                style={isSelected ? { backgroundColor: cat.color, borderColor: cat.color } : {}}
+              >
+                {cat.emoji} {cat.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* List */}
       {loading ? (
         <p className="text-gray-400 text-sm">Loading...</p>
       ) : filtered.length === 0 ? (
         <div className="card text-center text-gray-400 py-10 space-y-2">
           <p className="font-medium">
-            {myFoods.length === 0 ? "Your food list is empty." : "No foods match your search."}
+            {myFoods.length === 0
+              ? "Your food list is empty."
+              : "No foods match your filters."}
           </p>
           {myFoods.length === 0 && (
             <p className="text-sm">
               Click <strong>Add Food</strong> to add foods from the database to your personal list.
+            </p>
+          )}
+          {myFoods.length > 0 && (search || selectedCategoryIds.length > 0) && (
+            <p className="text-sm">
+              Try clearing your search or category filters.
             </p>
           )}
         </div>
