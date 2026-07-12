@@ -546,19 +546,19 @@ export default function MyFoods() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {/* Pairing button */}
                   <button
                     onClick={() => setPairingFood(uf)}
                     title="Manage pairings"
                     className={[
-                      "flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                      "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
                       myPairings.length > 0
-                        ? "bg-primary-50 text-primary-700 hover:bg-primary-100"
-                        : "text-gray-400 hover:bg-gray-100 hover:text-gray-600",
+                        ? "bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700",
                     ].join(" ")}
                   >
-                    <Link2 size={13} />
+                    <Link2 size={15} />
                     {myPairings.length > 0 && <span>{myPairings.length}</span>}
                   </button>
 
