@@ -1,0 +1,36 @@
+Great! The app should now be accessible from your phone at:
+
+http://192.168.0.29:5173
+The firewall rules you added (New-NetFirewallRule) are persistent — they'll survive reboots. If you ever want to remove them, run in PowerShell (Admin):
+
+powershell
+Remove-NetFirewallRule -DisplayName "Manjador Frontend"
+Remove-NetFirewallRule -DisplayName "Manjador Backend"
+
+
+And to remove the port forwarding rules:
+
+powershell
+netsh interface portproxy delete v4tov4 listenport=5173 listenaddress=0.0.0.0
+netsh interface portproxy delete v4tov4 listenport=8000 listenaddress=0.0.0.0
+But for now, you're all set — just make sure both the backend and frontend are running before accessing from your phone.
+
+
+
+
+
+Here's the description of a new feature:
+A new page called "My Foods". The user can add foods from the database to their My Foods. My Foods becomes the source of foods to add when entering the daily log or creating meals. On top of that, the user can assign each entry to one or more meal categories (breakfast, lunch, dinner, snack). The user should also be able to add a list of pairings for that food. For instance, the user adds "granola" and "yogurt" to the food database, each with its nutrition facts. Then, he adds them to his "My Foods" and marks them as "pairing" of one another. This will allow a future recommendation meal feature to pair foods together. Don't implement the recommendation feature yet, I'll give you more details later. For now let's focus on the "My Foods" page and the features I described.
+
+
+
+
+Let's plan changes to the meal planner, since it doesn't work as I need it.
+We should be able to create three types of meals:
+1) Meal: it belongs to one or more meal categories (breakfast, lunch, dinner, snack), and has a certain amount of calories as a goal. Identified by a name, it contains multiple foods from "My Foods" that add up to the calorie goal (roughly). 
+2) Daily Meal (or a better name, if we can find one): The user first picks any number of meal categories, for instance: breakfast, lunch, dinner and 2 snacks. Then, the user can assign a certain amount of calories to each meal category. Adding up the calories for all meals should add up to the total calorie goal. Then, each of the meals can be filled with one or more foods from "My Foods" of the corresponding meal category or by selecting a pre-defined Meal (number 1). If the user adds food directly, the system should ask them if they want to save that as a new Meal (number 1).
+
+
+A cool feature would be to get a recommendation for a given meal. For instance, the user clicks the recommendation button for breakfast and gets a list of foods that add up to the calorie goal for breakfast.
+3) Weekly Meal (or a better name, if we can find one): 
+When creating a meal plan, we should be able to add one or more of each meal categories (breakfast, lunch, dinner, snack) and assign a certain amount of calories. Adding up the calories for all meals should add up to the total calorie goal. Then, each of the meal can be filled with one or more foods from "My Foods" of the corresponding meal category. A cool feature would be to get a recommendation for a given meal. For instance, the user clicks the recom

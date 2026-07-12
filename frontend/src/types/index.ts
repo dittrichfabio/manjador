@@ -146,3 +146,22 @@ export interface MealPlan {
   total_carbs_g: number;
   total_fat_g: number;
 }
+
+export interface UserFood {
+  id: number;
+  user_id: number;
+  food_id: number;
+  food: Food;
+  meal_categories: MealCategory[];
+  added_at: string;
+}
+
+export interface FoodPairing {
+  id: number;
+  user_id: number;
+  food_a_id: number;
+  food_b_id: number;
+  food_a: Food;
+  food_b: Food;
+  added_at: string;
+}

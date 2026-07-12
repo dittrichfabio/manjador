@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, BookOpen, CalendarDays, Database,
+  LayoutDashboard, BookOpen, CalendarDays, Database, Heart,
   Scale, Ruler, BarChart2, Settings, LogOut, Menu,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
@@ -12,6 +12,7 @@ const NAV = [
   { to: "/log",          label: "Daily Log",     Icon: BookOpen },
   { to: "/planner",      label: "Meal Planner",  Icon: CalendarDays },
   { to: "/foods",        label: "Food Database", Icon: Database },
+  { to: "/my-foods",     label: "My Foods",      Icon: Heart },
   { to: "/weight",       label: "Weight",        Icon: Scale },
   { to: "/measurements", label: "Measurements",  Icon: Ruler },
   { to: "/charts",       label: "Charts",        Icon: BarChart2 },

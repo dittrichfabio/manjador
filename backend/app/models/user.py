@@ -50,3 +50,4 @@ class User(Base):
     meal_logs = relationship("MealLog", back_populates="user", cascade="all, delete-orphan")
     body_measurements = relationship("BodyMeasurement", back_populates="user", cascade="all, delete-orphan")
     meal_plans = relationship("MealPlan", back_populates="user", cascade="all, delete-orphan")
+    my_foods = relationship("UserFood", back_populates="user", cascade="all, delete-orphan")

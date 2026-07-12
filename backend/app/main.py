@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import users, weights, measurements, foods, meals, plans, data
+from app.routers import users, weights, measurements, foods, meals, plans, data, my_foods
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +146,7 @@ app.include_router(foods.router, prefix="/api")
 app.include_router(meals.router, prefix="/api")
 app.include_router(plans.router, prefix="/api")
 app.include_router(data.router, prefix="/api")
+app.include_router(my_foods.router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------

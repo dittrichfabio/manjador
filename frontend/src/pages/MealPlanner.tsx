@@ -3,9 +3,9 @@ import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import {
   createMealPlan, deleteMealPlan,
-  getFoods, getMealCategories, getMealPlans,
+  getFoods, getMealCategories, getMealPlans, getMyFoods,
 } from "../services/api";
-import type { Food, MealCategory, MealPlan } from "../types";
+import type { Food, MealCategory, MealPlan, UserFood } from "../types";
 
 export default function MealPlanner() {
   const { user } = useAuth();
@@ -24,6 +24,9 @@ export default function MealPlanner() {
   // Per-category food search
   const [catQuery, setCatQuery] = useState<Record<number, string>>({});
   const [catResults, setCatResults] = useState<Record<number, Food[]>>({});
+  // Per-category tab: "my-foods" | "all"
+  const [catTab, setCatTab] = useState<Record<number, "my-foods" | "all">>({});
+  const [myFoods, setMyFoods] = useState<UserFood[]>([]);
 
   const load = useCallback(() => {
     if (!user) return;
@@ -38,6 +41,12 @@ export default function MealPlanner() {
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Load My Foods once (user context is stable)
+  useEffect(() => {
+    if (!user) return;
+    getMyFoods(user.id).then(setMyFoods).catch(() => {});
+  }, [user]);
 
   const snp = (field: string, val: string) =>
     setNewPlan((p) => ({ ...p, [field]: val }));
@@ -79,8 +88,17 @@ export default function MealPlanner() {
     if (selected?.id === planId) setSelected(null);
   };
 
+  const getCatTab = (catId: number) => catTab[catId] ?? "my-foods";
+
+  const setCatTabFor = (catId: number, tab: "my-foods" | "all") => {
+    setCatTab((p) => ({ ...p, [catId]: tab }));
+    setCatQuery((p) => ({ ...p, [catId]: "" }));
+    setCatResults((p) => ({ ...p, [catId]: [] }));
+  };
+
   const searchCat = async (catId: number, q: string) => {
     setCatQuery((p) => ({ ...p, [catId]: q }));
+    if (getCatTab(catId) !== "all") { setCatResults((p) => ({ ...p, [catId]: [] })); return; }
     if (!q.trim()) { setCatResults((p) => ({ ...p, [catId]: [] })); return; }
     const results = await getFoods(q).catch(() => [] as Food[]);
     setCatResults((p) => ({ ...p, [catId]: results as Food[] }));
@@ -288,13 +306,65 @@ export default function MealPlanner() {
                       <p className="text-xs text-gray-400 mb-3">No foods planned for this meal</p>
                     )}
 
+                    {/* Food search — tabbed */}
+                    <div className="flex gap-1 mb-1.5 border-b border-gray-200">
+                      {(["my-foods", "all"] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setCatTabFor(cat.id, tab)}
+                          className={[
+                            "px-2.5 py-1 text-xs font-medium -mb-px border-b-2 transition-colors",
+                            getCatTab(cat.id) === tab
+                              ? "border-primary-600 text-primary-700"
+                              : "border-transparent text-gray-400 hover:text-gray-600",
+                          ].join(" ")}
+                        >
+                          {tab === "my-foods" ? "My Foods" : "All Foods"}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       className="input text-sm"
-                      placeholder="Search food to add..."
+                      placeholder={getCatTab(cat.id) === "my-foods" ? "Filter My Foods..." : "Search food database..."}
                       value={q}
                       onChange={(e) => searchCat(cat.id, e.target.value)}
                     />
-                    {res.length > 0 && (
+                    {/* My Foods results */}
+                    {getCatTab(cat.id) === "my-foods" && (
+                      <div className="border border-gray-200 rounded-lg mt-1 max-h-36 overflow-y-auto divide-y divide-gray-50">
+                        {myFoods.filter((uf) =>
+                          !q.trim() ||
+                          uf.food.name.toLowerCase().includes(q.toLowerCase()) ||
+                          (uf.food.brand ?? "").toLowerCase().includes(q.toLowerCase())
+                        ).length === 0 ? (
+                          <p className="px-3 py-2 text-xs text-gray-400 text-center">
+                            {myFoods.length === 0 ? "No foods in My Foods yet." : "No matching foods."}
+                          </p>
+                        ) : (
+                          myFoods
+                            .filter((uf) =>
+                              !q.trim() ||
+                              uf.food.name.toLowerCase().includes(q.toLowerCase()) ||
+                              (uf.food.brand ?? "").toLowerCase().includes(q.toLowerCase())
+                            )
+                            .slice(0, 8)
+                            .map((uf) => (
+                              <div
+                                key={uf.food_id}
+                                className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 flex justify-between"
+                              >
+                                <span>{uf.food.name}{uf.food.brand ? ` (${uf.food.brand})` : ""}</span>
+                                <span className="text-gray-400">
+                                  {Math.round(uf.food.calories_per_serving)} kcal/{uf.food.serving_size}{uf.food.serving_unit}
+                                </span>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    )}
+                    {/* All Foods results */}
+                    {getCatTab(cat.id) === "all" && res.length > 0 && (
                       <div className="border border-gray-200 rounded-lg mt-1 max-h-36 overflow-y-auto divide-y divide-gray-50">
                         {res.slice(0, 8).map((food) => (
                           <div

@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import DailyLog from "./pages/DailyLog";
 import MealPlanner from "./pages/MealPlanner";
 import FoodDatabase from "./pages/FoodDatabase";
+import MyFoods from "./pages/MyFoods";
 import WeightTracker from "./pages/WeightTracker";
 import Measurements from "./pages/Measurements";
 import Charts from "./pages/Charts";
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="log" element={<DailyLog />} />
             <Route path="planner" element={<MealPlanner />} />
             <Route path="foods" element={<FoodDatabase />} />
+            <Route path="my-foods" element={<MyFoods />} />
             <Route path="weight" element={<WeightTracker />} />
             <Route path="measurements" element={<Measurements />} />
             <Route path="charts" element={<Charts />} />

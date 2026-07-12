@@ -3,10 +3,10 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import {
   createMealLog, deleteMealLog, getDailySummary,
-  getFoods, getMealCategories,
+  getFoods, getMealCategories, getMyFoods,
 } from "../services/api";
 import MacroBar from "../components/MacroBar";
-import type { DailySummary, Food, MealCategory } from "../types";
+import type { DailySummary, Food, MealCategory, UserFood } from "../types";
 
 function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -31,6 +31,10 @@ export default function DailyLog() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Food picker tab: "my-foods" (default) | "all"
+  const [foodTab, setFoodTab] = useState<"my-foods" | "all">("my-foods");
+  const [myFoods, setMyFoods] = useState<UserFood[]>([]);
+
   const loadSummary = useCallback(() => {
     if (!user) return;
     setLoading(true);
@@ -49,12 +53,19 @@ export default function DailyLog() {
     setDate(d);
   };
 
-  // Debounced food search
+  // Load My Foods when form opens
   useEffect(() => {
+    if (!showForm || !user) return;
+    getMyFoods(user.id).then(setMyFoods).catch(() => {});
+  }, [showForm, user]);
+
+  // Debounced search — only active in "all" tab
+  useEffect(() => {
+    if (foodTab !== "all") { setResults([]); return; }
     if (!query.trim()) { setResults([]); return; }
     const t = setTimeout(() => getFoods(query).then(setResults).catch(() => {}), 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, foodTab]);
 
   const addEntry = (food: Food) => {
     setEntries((prev) => prev.find((e) => e.food.id === food.id)
@@ -80,6 +91,7 @@ export default function DailyLog() {
     setQuery("");
     setResults([]);
     setError("");
+    setFoodTab("my-foods");
   };
 
   const handleSave = async () => {
@@ -249,16 +261,77 @@ export default function DailyLog() {
             </div>
           </div>
 
-          {/* Food search */}
+          {/* Food picker */}
           <div>
-            <label className="label">Search &amp; Add Foods</label>
+            <label className="label">Add Foods</label>
+            {/* Tabs */}
+            <div className="flex gap-1 mb-2 border-b border-gray-200">
+              {(["my-foods", "all"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => { setFoodTab(tab); setQuery(""); setResults([]); }}
+                  className={[
+                    "px-3 py-1.5 text-sm font-medium -mb-px border-b-2 transition-colors",
+                    foodTab === tab
+                      ? "border-primary-600 text-primary-700"
+                      : "border-transparent text-gray-500 hover:text-gray-700",
+                  ].join(" ")}
+                >
+                  {tab === "my-foods" ? "My Foods" : "All Foods"}
+                </button>
+              ))}
+            </div>
+
+            {/* Search input */}
             <input
               className="input"
-              placeholder="Search food database..."
+              placeholder={foodTab === "my-foods" ? "Filter My Foods..." : "Search food database..."}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            {results.length > 0 && (
+
+            {/* My Foods results */}
+            {foodTab === "my-foods" && (
+              <div className="mt-1 border border-gray-200 rounded-lg max-h-52 overflow-y-auto divide-y divide-gray-50">
+                {myFoods.filter((uf) =>
+                  !query.trim() ||
+                  uf.food.name.toLowerCase().includes(query.toLowerCase()) ||
+                  (uf.food.brand ?? "").toLowerCase().includes(query.toLowerCase())
+                ).length === 0 ? (
+                  <p className="text-sm text-gray-400 px-3 py-3 text-center">
+                    {myFoods.length === 0
+                      ? "No foods in My Foods yet."
+                      : "No matching foods found."}
+                  </p>
+                ) : (
+                  myFoods
+                    .filter((uf) =>
+                      !query.trim() ||
+                      uf.food.name.toLowerCase().includes(query.toLowerCase()) ||
+                      (uf.food.brand ?? "").toLowerCase().includes(query.toLowerCase())
+                    )
+                    .map((uf) => (
+                      <button
+                        key={uf.food_id}
+                        onClick={() => addEntry(uf.food)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm transition-colors"
+                      >
+                        <span className="font-medium">{uf.food.name}</span>
+                        {uf.food.brand && (
+                          <span className="text-gray-400 ml-1 text-xs">({uf.food.brand})</span>
+                        )}
+                        <span className="text-gray-400 ml-2 text-xs">
+                          {Math.round(uf.food.calories_per_serving)} kcal/{uf.food.serving_size}{uf.food.serving_unit}
+                        </span>
+                      </button>
+                    ))
+                )}
+              </div>
+            )}
+
+            {/* All Foods results */}
+            {foodTab === "all" && results.length > 0 && (
               <div className="mt-1 border border-gray-200 rounded-lg max-h-52 overflow-y-auto divide-y divide-gray-50">
                 {results.map((food) => (
                   <button

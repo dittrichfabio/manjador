@@ -1,7 +1,7 @@
 import axios from "axios";
 import type {
   User, UserProfile, Food, MealCategory, MealLog, DailySummary,
-  WeightLog, BodyMeasurement, MealPlan,
+  WeightLog, BodyMeasurement, MealPlan, UserFood, FoodPairing,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api", withCredentials: true });
@@ -112,3 +112,25 @@ export const importFoods = (userId: number, file: File) => {
   form.append("file", file);
   return api.post(`/users/${userId}/data/import/foods`, form);
 };
+
+// My Foods
+export const getMyFoods = (userId: number) =>
+  api.get<UserFood[]>(`/users/${userId}/my-foods`).then(r => r.data);
+
+export const addMyFood = (userId: number, data: { food_id: number; meal_category_ids: number[] }) =>
+  api.post<UserFood>(`/users/${userId}/my-foods`, data).then(r => r.data);
+
+export const updateMyFood = (userId: number, foodId: number, data: { meal_category_ids: number[] }) =>
+  api.patch<UserFood>(`/users/${userId}/my-foods/${foodId}`, data).then(r => r.data);
+
+export const removeMyFood = (userId: number, foodId: number) =>
+  api.delete(`/users/${userId}/my-foods/${foodId}`);
+
+export const getMyFoodPairings = (userId: number) =>
+  api.get<FoodPairing[]>(`/users/${userId}/my-foods/pairings`).then(r => r.data);
+
+export const addFoodPairing = (userId: number, data: { food_a_id: number; food_b_id: number }) =>
+  api.post<FoodPairing>(`/users/${userId}/my-foods/pairings`, data).then(r => r.data);
+
+export const removeFoodPairing = (userId: number, pairingId: number) =>
+  api.delete(`/users/${userId}/my-foods/pairings/${pairingId}`);
