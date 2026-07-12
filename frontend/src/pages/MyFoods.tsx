@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link2, Plus, Search, Trash2, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -348,12 +348,13 @@ export default function MyFoods() {
   const [categories, setCategories] = useState<MealCategory[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCats, setEditingCats] = useState<UserFood | null>(null);
   const [pairingFood, setPairingFood] = useState<UserFood | null>(null);
 
-  const reload = useCallback(() => {
+  useEffect(() => {
     if (!user) return;
     setLoading(true);
     Promise.all([
@@ -363,9 +364,7 @@ export default function MyFoods() {
       setMyFoods(foods as UserFood[]);
       setPairings(pairs as FoodPairing[]);
     }).finally(() => setLoading(false));
-  }, [user]);
-
-  useEffect(() => { reload(); }, [reload]);
+  }, [user?.id, reloadTrigger]);
   useEffect(() => { getMealCategories().then(setCategories).catch(() => {}); }, []);
 
   const filtered = myFoods.filter((uf) =>
@@ -376,19 +375,19 @@ export default function MyFoods() {
   const handleAdd = async (foodId: number, categoryIds: number[]) => {
     if (!user) return;
     await addMyFood(user.id, { food_id: foodId, meal_category_ids: categoryIds });
-    reload();
+    setReloadTrigger((v) => v + 1);
   };
 
   const handleUpdateCats = async (categoryIds: number[]) => {
     if (!user || !editingCats) return;
     await updateMyFood(user.id, editingCats.food_id, { meal_category_ids: categoryIds });
-    reload();
+    setReloadTrigger((v) => v + 1);
   };
 
   const handleRemove = async (foodId: number) => {
     if (!user || !window.confirm("Remove this food from My Foods?")) return;
     await removeMyFood(user.id, foodId).catch(() => {});
-    reload();
+    setReloadTrigger((v) => v + 1);
   };
 
   const handleAddPairing = async (otherFoodId: number) => {
