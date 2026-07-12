@@ -18,6 +18,8 @@ class UserUpdate(BaseModel):
     protein_goal_g: Optional[float] = None
     carbs_goal_g: Optional[float] = None
     fat_goal_g: Optional[float] = None
+    dashboard_show_tdee: Optional[str] = None
+    dashboard_show_nutrients: Optional[str] = None
 
 
 class UserOut(BaseModel):
@@ -33,6 +35,8 @@ class UserOut(BaseModel):
     protein_goal_g: Optional[float] = None
     carbs_goal_g: Optional[float] = None
     fat_goal_g: Optional[float] = None
+    dashboard_show_tdee: Optional[str] = "true"
+    dashboard_show_nutrients: Optional[str] = '["calories","protein","carbs","fat"]'
 
     model_config = {"from_attributes": True}
 

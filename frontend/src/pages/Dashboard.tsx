@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Scale, Flame, Target } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { getDailySummary, getWeightLogs } from "../services/api";
-import MacroBar from "../components/MacroBar";
 import type { DailySummary, WeightLog } from "../types";
 
 function greeting() {
@@ -71,7 +70,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {user?.computed_tdee && (
+        {user?.computed_tdee && user.dashboard_show_tdee === "true" && (
           <div className="card flex items-center gap-4">
             <div className="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
               <Flame className="text-orange-500" size={20} />
@@ -100,30 +99,6 @@ export default function Dashboard() {
               </p>
               <p className="text-xs text-gray-400">Daily target</p>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Today nutrition */}
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Today&apos;s Nutrition</h3>
-        {summary ? (
-          <MacroBar
-            calories={summary.total_calories}
-            protein={summary.total_protein_g}
-            carbs={summary.total_carbs_g}
-            fat={summary.total_fat_g}
-            goalCalories={user?.calorie_goal}
-            goalProtein={user?.protein_goal_g}
-            goalCarbs={user?.carbs_goal_g}
-            goalFat={user?.fat_goal_g}
-          />
-        ) : (
-          <div className="card text-center text-gray-400 py-10">
-            <p className="mb-3">No meals logged today.</p>
-            <Link to="/log" className="btn-primary inline-flex">
-              Log your first meal
-            </Link>
           </div>
         )}
       </div>

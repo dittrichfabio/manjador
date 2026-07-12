@@ -20,6 +20,8 @@ export interface User {
   protein_goal_g?: number;
   carbs_goal_g?: number;
   fat_goal_g?: number;
+  dashboard_show_tdee?: string;      // "true" or "false"
+  dashboard_show_nutrients?: string; // JSON array e.g. '["calories","protein"]'
 }
 
 export interface UserProfile extends User {

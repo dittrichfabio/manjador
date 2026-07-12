@@ -29,6 +29,8 @@ export default function Settings() {
     protein_goal_g: "",
     carbs_goal_g: "",
     fat_goal_g: "",
+    dashboard_show_tdee: "true",
+    dashboard_show_nutrients: '["calories","protein","carbs","fat"]',
   });
 
   const [saving, setSaving] = useState(false);
@@ -48,6 +50,8 @@ export default function Settings() {
       protein_goal_g: user.protein_goal_g?.toString() ?? "",
       carbs_goal_g:   user.carbs_goal_g?.toString()   ?? "",
       fat_goal_g:     user.fat_goal_g?.toString()     ?? "",
+      dashboard_show_tdee:      user.dashboard_show_tdee      ?? "true",
+      dashboard_show_nutrients: user.dashboard_show_nutrients ?? '["calories","protein","carbs","fat"]',
     });
   }, [user]);
 
@@ -70,6 +74,8 @@ export default function Settings() {
         protein_goal_g: form.protein_goal_g ? parseFloat(form.protein_goal_g) : undefined,
         carbs_goal_g:   form.carbs_goal_g   ? parseFloat(form.carbs_goal_g)   : undefined,
         fat_goal_g:     form.fat_goal_g     ? parseFloat(form.fat_goal_g)     : undefined,
+        dashboard_show_tdee:      form.dashboard_show_tdee,
+        dashboard_show_nutrients: form.dashboard_show_nutrients,
       });
       setUser(updated);
       setSuccess(true);
@@ -248,6 +254,59 @@ export default function Settings() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Dashboard Display Preferences */}
+      <div className="card space-y-4">
+        <div>
+          <h3 className="font-semibold text-lg">Display Options</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Choose which metrics to show on each page.
+          </p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-700">Dashboard</p>
+          <label className="flex items-center gap-2 cursor-pointer mt-1">
+            <input
+              type="checkbox"
+              checked={form.dashboard_show_tdee === "true"}
+              onChange={(e) => sf("dashboard_show_tdee", e.target.checked ? "true" : "false")}
+              className="w-4 h-4"
+            />
+            <span className="text-sm">Show TDEE</span>
+          </label>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-700">Daily Log</p>
+          <label className="label mt-1">Show Nutrient Goals</label>
+          <div className="space-y-2">
+            {[
+              ["calories", "Calories"],
+              ["protein", "Protein"],
+              ["carbs", "Carbs"],
+              ["fat", "Fat"],
+            ].map(([key, label]) => {
+              const current = JSON.parse(form.dashboard_show_nutrients || "[]") as string[];
+              const checked = current.includes(key);
+              return (
+                <label key={key} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const updated = e.target.checked
+                        ? [...current, key]
+                        : current.filter((k) => k !== key);
+                      sf("dashboard_show_nutrients", JSON.stringify(updated));
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Nutrition Goals section */}

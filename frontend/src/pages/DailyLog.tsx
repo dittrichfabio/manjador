@@ -142,6 +142,11 @@ export default function DailyLog() {
           goalProtein={user?.protein_goal_g}
           goalCarbs={user?.carbs_goal_g}
           goalFat={user?.fat_goal_g}
+          showNutrients={
+            user?.dashboard_show_nutrients
+              ? (JSON.parse(user.dashboard_show_nutrients) as string[])
+              : ["calories", "protein", "carbs", "fat"]
+          }
         />
       )}
 

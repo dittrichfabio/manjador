@@ -10,6 +10,37 @@ from app.routers import users, weights, measurements, foods, meals, plans, data
 logger = logging.getLogger(__name__)
 
 
+def _migrate_users_table():
+    """
+    Add dashboard_show_tdee and dashboard_show_nutrients columns if missing.
+    Safe to run on every startup.
+    """
+    from app.config import settings
+
+    db_path = settings.database_url.replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
+    try:
+        info = conn.execute("PRAGMA table_info(users)").fetchall()
+        if not info:
+            return  # table doesn't exist yet
+        columns = {row[1] for row in info}
+        
+        if "dashboard_show_tdee" not in columns:
+            logger.info("Adding dashboard_show_tdee column to users table")
+            conn.execute('ALTER TABLE users ADD COLUMN dashboard_show_tdee VARCHAR DEFAULT "true"')
+            conn.commit()
+        
+        if "dashboard_show_nutrients" not in columns:
+            logger.info("Adding dashboard_show_nutrients column to users table")
+            conn.execute('ALTER TABLE users ADD COLUMN dashboard_show_nutrients VARCHAR DEFAULT \'["calories","protein","carbs","fat"]\'')
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def _migrate_foods_table():
     """
     One-time migration: rename *_per_100g columns to *_per_serving and add iron.
@@ -123,8 +154,9 @@ app.include_router(data.router, prefix="/api")
 
 @app.on_event("startup")
 def startup_event():
-    # Migrate existing schema if needed (rename _per_100g → _per_serving, add iron)
-    _migrate_foods_table()
+    # Migrate existing schema if needed
+    _migrate_users_table()  # add dashboard preferences
+    _migrate_foods_table()  # rename _per_100g → _per_serving, add iron
     # Create all tables if they do not exist yet
     Base.metadata.create_all(bind=engine)
 

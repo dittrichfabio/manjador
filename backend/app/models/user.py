@@ -40,6 +40,10 @@ class User(Base):
     carbs_goal_g = Column(Float, nullable=True)
     fat_goal_g = Column(Float, nullable=True)
 
+    # Dashboard display preferences (JSON-encoded lists stored as strings)
+    dashboard_show_tdee = Column(String, default="true")  # "true" or "false"
+    dashboard_show_nutrients = Column(String, default='["calories","protein","carbs","fat"]')
+
     # Relationships
     foods = relationship("Food", back_populates="created_by_user", foreign_keys="Food.created_by")
     weight_logs = relationship("WeightLog", back_populates="user", cascade="all, delete-orphan")

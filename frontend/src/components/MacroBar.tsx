@@ -7,6 +7,7 @@ interface Props {
   goalProtein?: number;
   goalCarbs?: number;
   goalFat?: number;
+  showNutrients?: string[];  // e.g. ["calories", "protein"]
 }
 
 function ProgressBar({ value, goal, color }: { value: number; goal?: number; color: string }) {
@@ -21,18 +22,21 @@ function ProgressBar({ value, goal, color }: { value: number; goal?: number; col
 export default function MacroBar({
   calories, protein, carbs, fat,
   goalCalories, goalProtein, goalCarbs, goalFat,
+  showNutrients = ["calories", "protein", "carbs", "fat"],
 }: Props) {
-  const macros = [
-    { label: "Calories", value: calories, goal: goalCalories, unit: "kcal", color: "bg-orange-400" },
-    { label: "Protein",  value: protein,  goal: goalProtein,  unit: "g",    color: "bg-blue-400" },
-    { label: "Carbs",    value: carbs,    goal: goalCarbs,    unit: "g",    color: "bg-yellow-400" },
-    { label: "Fat",      value: fat,      goal: goalFat,      unit: "g",    color: "bg-pink-400" },
+  const allMacros = [
+    { key: "calories", label: "Calories", value: calories, goal: goalCalories, unit: "kcal", color: "bg-orange-400" },
+    { key: "protein",  label: "Protein",  value: protein,  goal: goalProtein,  unit: "g",    color: "bg-blue-400" },
+    { key: "carbs",    label: "Carbs",    value: carbs,    goal: goalCarbs,    unit: "g",    color: "bg-yellow-400" },
+    { key: "fat",      label: "Fat",      value: fat,      goal: goalFat,      unit: "g",    color: "bg-pink-400" },
   ];
+
+  const macros = allMacros.filter((m) => showNutrients.includes(m.key));
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      {macros.map(({ label, value, goal, unit, color }) => (
-        <div key={label} className="card">
+      {macros.map(({ key, label, value, goal, unit, color }) => (
+        <div key={key} className="card">
           <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</p>
           <p className="text-2xl font-bold mt-1">
             {Math.round(value)}
