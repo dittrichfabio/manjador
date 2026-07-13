@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link2, Plus, Search, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Link2, Plus, Search, Trash2, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import {
-  addFoodPairing, addMyFood, getFoods, getMealCategories,
-  getMyFoodPairings, getMyFoods, removeFoodPairing, removeMyFood, updateMyFood,
+  addFoodPairing, addFoodRequirement, addMyFood, getFoods, getMealCategories,
+  getMyFoodPairings, getMyFoodRequirements, getMyFoods,
+  removeFoodPairing, removeFoodRequirement, removeMyFood, updateMyFood,
 } from "../services/api";
-import type { Food, FoodPairing, MealCategory, UserFood } from "../types";
+import type { Food, FoodPairing, FoodRequirement, MealCategory, UserFood } from "../types";
 
 // ---------------------------------------------------------------------------
 // Category badge
@@ -220,117 +221,196 @@ function EditCategoriesModal({
 }
 
 // ---------------------------------------------------------------------------
-// Pairings modal
+// Links modal — pairings + requires in one place
 // ---------------------------------------------------------------------------
-function PairingsModal({
+function LinksModal({
   userFood,
   myFoods,
   pairings,
-  onAdd,
-  onRemove,
+  requirements,
+  onAddPairing,
+  onRemovePairing,
+  onAddRequirement,
+  onRemoveRequirement,
   onClose,
 }: {
   userFood: UserFood;
   myFoods: UserFood[];
   pairings: FoodPairing[];
-  onAdd: (otherFoodId: number) => Promise<void>;
-  onRemove: (pairingId: number) => Promise<void>;
+  requirements: FoodRequirement[];
+  onAddPairing: (otherFoodId: number) => Promise<void>;
+  onRemovePairing: (pairingId: number) => Promise<void>;
+  onAddRequirement: (foodId: number, requiredFoodId: number) => Promise<void>;
+  onRemoveRequirement: (requirementId: number) => Promise<void>;
   onClose: () => void;
 }) {
-  const [query, setQuery] = useState("");
+  const [pairQuery, setPairQuery] = useState("");
+  const [reqQuery, setReqQuery] = useState("");
   const [adding, setAdding] = useState(false);
 
-  // Pairings involving this food
+  // ── Pairings ──
   const myPairings = pairings.filter(
     (p) => p.food_a_id === userFood.food_id || p.food_b_id === userFood.food_id
   );
-
-  // Other foods available to pair (already in My Foods, not self, not already paired)
   const pairedIds = new Set(myPairings.flatMap((p) => [p.food_a_id, p.food_b_id]));
   pairedIds.add(userFood.food_id);
-  const available = myFoods.filter(
+  const availableForPair = myFoods.filter(
     (uf) => !pairedIds.has(uf.food_id) &&
-      uf.food.name.toLowerCase().includes(query.toLowerCase())
+      uf.food.name.toLowerCase().includes(pairQuery.toLowerCase())
   );
 
-  const handleAdd = async (otherFoodId: number) => {
+  // ── Requires ──
+  const myRequires = requirements.filter((r) => r.food_id === userFood.food_id);
+  const requiredIds = new Set([...myRequires.map((r) => r.required_food_id), userFood.food_id]);
+  const availableForReq = myFoods.filter(
+    (uf) => !requiredIds.has(uf.food_id) &&
+      uf.food.name.toLowerCase().includes(reqQuery.toLowerCase())
+  );
+
+  // ── Required by (read-only context) ──
+  const requiredBy = requirements.filter((r) => r.required_food_id === userFood.food_id);
+
+  const wrap = async (fn: () => Promise<void>, clearQuery: () => void) => {
     setAdding(true);
-    try { await onAdd(otherFoodId); setQuery(""); }
+    try { await fn(); clearQuery(); }
     finally { setAdding(false); }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md space-y-4 p-6">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold">Pairings</h3>
+            <h3 className="font-semibold">Food Links</h3>
             <p className="text-sm text-gray-500">{userFood.food.name}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
 
-        {/* Current pairings */}
-        {myPairings.length > 0 ? (
-          <ul className="space-y-1">
-            {myPairings.map((p) => {
-              const other = p.food_a_id === userFood.food_id ? p.food_b : p.food_a;
-              return (
-                <li key={p.id} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Link2 size={13} className="text-gray-400" />
-                    <span className="font-medium">{other.name}</span>
-                    {other.brand && <span className="text-xs text-gray-400">{other.brand}</span>}
-                  </div>
-                  <button
-                    onClick={() => onRemove(p.id)}
-                    className="text-red-400 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="text-sm text-gray-400 text-center py-2">No pairings yet.</p>
-        )}
-
-        {/* Add pairing */}
-        <div className="space-y-2">
-          <label className="label">Add pairing from My Foods</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              className="input pl-8 text-sm"
-              placeholder="Search My Foods..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+        {/* ── Pairs with ── */}
+        <section className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Link2 size={14} className="text-gray-500" />
+            <span className="text-sm font-semibold text-gray-700">Pairs with</span>
+            <span className="text-xs text-gray-400 ml-1">bidirectional</span>
           </div>
-          {query.trim() && available.length > 0 && (
-            <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-36 overflow-y-auto">
-              {available.map((uf) => (
-                <li key={uf.food_id}>
-                  <button
-                    type="button"
-                    disabled={adding}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm disabled:opacity-50 transition-colors"
-                    onClick={() => handleAdd(uf.food_id)}
-                  >
-                    <span className="font-medium">{uf.food.name}</span>
-                    {uf.food.brand && <span className="text-xs text-gray-400 ml-1">— {uf.food.brand}</span>}
+          {myPairings.length > 0 ? (
+            <ul className="space-y-1">
+              {myPairings.map((p) => {
+                const other = p.food_a_id === userFood.food_id ? p.food_b : p.food_a;
+                return (
+                  <li key={p.id} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                    <span className="text-sm font-medium">{other.name}
+                      {other.brand && <span className="text-xs text-gray-400 ml-1">— {other.brand}</span>}
+                    </span>
+                    <button onClick={() => onRemovePairing(p.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-400">No pairings yet.</p>
+          )}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input className="input pl-8 text-sm" placeholder="Add from My Foods…"
+              value={pairQuery} onChange={(e) => setPairQuery(e.target.value)} />
+          </div>
+          {pairQuery.trim() && (
+            availableForPair.length > 0 ? (
+              <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-32 overflow-y-auto">
+                {availableForPair.map((uf) => (
+                  <li key={uf.food_id}>
+                    <button type="button" disabled={adding}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm disabled:opacity-50 transition-colors"
+                      onClick={() => wrap(() => onAddPairing(uf.food_id), () => setPairQuery(""))}
+                    >
+                      <span className="font-medium">{uf.food.name}</span>
+                      {uf.food.brand && <span className="text-xs text-gray-400 ml-1">— {uf.food.brand}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-xs text-gray-400 px-1">No unpaired foods found.</p>
+          )}
+        </section>
+
+        <hr className="border-gray-100" />
+
+        {/* ── Requires ── */}
+        <section className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <ArrowRight size={14} className="text-orange-500" />
+            <span className="text-sm font-semibold text-gray-700">Requires</span>
+            <span className="text-xs text-gray-400 ml-1">always needed, not mutual</span>
+          </div>
+          {myRequires.length > 0 ? (
+            <ul className="space-y-1">
+              {myRequires.map((r) => (
+                <li key={r.id} className="flex items-center justify-between rounded-lg bg-orange-50 px-3 py-2">
+                  <span className="text-sm font-medium text-orange-900">{r.required_food.name}
+                    {r.required_food.brand && <span className="text-xs text-orange-600 ml-1">— {r.required_food.brand}</span>}
+                  </span>
+                  <button onClick={() => onRemoveRequirement(r.id)} className="text-red-400 hover:text-red-600 transition-colors">
+                    <Trash2 size={14} />
                   </button>
                 </li>
               ))}
             </ul>
+          ) : (
+            <p className="text-sm text-gray-400">No requirements yet.</p>
           )}
-          {query.trim() && available.length === 0 && (
-            <p className="text-xs text-gray-400 px-1">No unpaired foods found.</p>
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input className="input pl-8 text-sm" placeholder="Add from My Foods…"
+              value={reqQuery} onChange={(e) => setReqQuery(e.target.value)} />
+          </div>
+          {reqQuery.trim() && (
+            availableForReq.length > 0 ? (
+              <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-32 overflow-y-auto">
+                {availableForReq.map((uf) => (
+                  <li key={uf.food_id}>
+                    <button type="button" disabled={adding}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm disabled:opacity-50 transition-colors"
+                      onClick={() => wrap(() => onAddRequirement(userFood.food_id, uf.food_id), () => setReqQuery(""))}
+                    >
+                      <span className="font-medium">{uf.food.name}</span>
+                      {uf.food.brand && <span className="text-xs text-gray-400 ml-1">— {uf.food.brand}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-xs text-gray-400 px-1">No available foods found.</p>
           )}
-        </div>
+        </section>
 
-        <div className="flex justify-end">
+        {/* ── Required by (read-only) ── */}
+        {requiredBy.length > 0 && (
+          <>
+            <hr className="border-gray-100" />
+            <section className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <ArrowLeft size={14} className="text-blue-500" />
+                <span className="text-sm font-semibold text-gray-700">Required by</span>
+                <span className="text-xs text-gray-400 ml-1">these foods always need this one</span>
+              </div>
+              <ul className="space-y-1">
+                {requiredBy.map((r) => (
+                  <li key={r.id} className="rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-900">
+                    {r.food.name}
+                    {r.food.brand && <span className="text-xs text-blue-600 ml-1">— {r.food.brand}</span>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
+        )}
+
+        <div className="flex justify-end pt-1">
           <button onClick={onClose} className="btn-secondary">Close</button>
         </div>
       </div>
@@ -345,6 +425,7 @@ export default function MyFoods() {
   const { user } = useAuth();
   const [myFoods, setMyFoods] = useState<UserFood[]>([]);
   const [pairings, setPairings] = useState<FoodPairing[]>([]);
+  const [requirements, setRequirements] = useState<FoodRequirement[]>([]);
   const [categories, setCategories] = useState<MealCategory[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
@@ -353,7 +434,7 @@ export default function MyFoods() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCats, setEditingCats] = useState<UserFood | null>(null);
-  const [pairingFood, setPairingFood] = useState<UserFood | null>(null);
+  const [linksFood, setLinksFood] = useState<UserFood | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -361,9 +442,11 @@ export default function MyFoods() {
     Promise.all([
       getMyFoods(user.id).catch(() => [] as UserFood[]),
       getMyFoodPairings(user.id).catch(() => [] as FoodPairing[]),
-    ]).then(([foods, pairs]) => {
+      getMyFoodRequirements(user.id).catch(() => [] as FoodRequirement[]),
+    ]).then(([foods, pairs, reqs]) => {
       setMyFoods(foods as UserFood[]);
       setPairings(pairs as FoodPairing[]);
+      setRequirements(reqs as FoodRequirement[]);
     }).finally(() => setLoading(false));
   }, [user?.id, reloadTrigger]);
   useEffect(() => { getMealCategories().then(setCategories).catch(() => {}); }, []);
@@ -399,17 +482,27 @@ export default function MyFoods() {
   };
 
   const handleAddPairing = async (otherFoodId: number) => {
-    if (!user || !pairingFood) return;
-    await addFoodPairing(user.id, { food_a_id: pairingFood.food_id, food_b_id: otherFoodId });
-    const updated = await getMyFoodPairings(user.id);
-    setPairings(updated);
+    if (!user || !linksFood) return;
+    await addFoodPairing(user.id, { food_a_id: linksFood.food_id, food_b_id: otherFoodId });
+    setPairings(await getMyFoodPairings(user.id));
   };
 
   const handleRemovePairing = async (pairingId: number) => {
     if (!user) return;
     await removeFoodPairing(user.id, pairingId).catch(() => {});
-    const updated = await getMyFoodPairings(user.id);
-    setPairings(updated);
+    setPairings(await getMyFoodPairings(user.id));
+  };
+
+  const handleAddRequirement = async (foodId: number, requiredFoodId: number) => {
+    if (!user) return;
+    await addFoodRequirement(user.id, { food_id: foodId, required_food_id: requiredFoodId });
+    setRequirements(await getMyFoodRequirements(user.id));
+  };
+
+  const handleRemoveRequirement = async (requirementId: number) => {
+    if (!user) return;
+    await removeFoodRequirement(user.id, requirementId).catch(() => {});
+    setRequirements(await getMyFoodRequirements(user.id));
   };
 
   return (
@@ -502,6 +595,13 @@ export default function MyFoods() {
             const pairedFoods = myPairings.map((p) =>
               p.food_a_id === uf.food_id ? p.food_b : p.food_a
             );
+            const myRequires = requirements.filter((r) => r.food_id === uf.food_id);
+            const requiredFoods = myRequires.map((r) => r.required_food);
+            const requiredByFoods = requirements
+              .filter((r) => r.required_food_id === uf.food_id)
+              .map((r) => r.food);
+            const linkCount = myPairings.length + myRequires.length;
+
             return (
               <div key={uf.id} className="card flex items-start gap-3">
                 <div className="flex-1 min-w-0">
@@ -524,7 +624,7 @@ export default function MyFoods() {
                       ))}
                     </div>
                   )}
-                  {/* Paired foods */}
+                  {/* Pairs with */}
                   {pairedFoods.length > 0 && (
                     <div className="mt-2">
                       <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
@@ -533,10 +633,39 @@ export default function MyFoods() {
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {pairedFoods.map((food) => (
-                          <span
-                            key={food.id}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700"
-                          >
+                          <span key={food.id} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                            {food.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Requires */}
+                  {requiredFoods.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                        <ArrowRight size={11} className="text-orange-500" />
+                        <span>Requires:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {requiredFoods.map((food) => (
+                          <span key={food.id} className="px-2 py-0.5 rounded-full text-xs bg-orange-50 text-orange-800">
+                            {food.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Required by */}
+                  {requiredByFoods.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                        <ArrowLeft size={11} className="text-blue-500" />
+                        <span>Required by:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {requiredByFoods.map((food) => (
+                          <span key={food.id} className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-800">
                             {food.name}
                           </span>
                         ))}
@@ -547,19 +676,19 @@ export default function MyFoods() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {/* Pairing button */}
+                  {/* Links button */}
                   <button
-                    onClick={() => setPairingFood(uf)}
-                    title="Manage pairings"
+                    onClick={() => setLinksFood(uf)}
+                    title="Manage food links"
                     className={[
                       "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
-                      myPairings.length > 0
+                      linkCount > 0
                         ? "bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100"
                         : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700",
                     ].join(" ")}
                   >
                     <Link2 size={15} />
-                    {myPairings.length > 0 && <span>{myPairings.length}</span>}
+                    {linkCount > 0 && <span>{linkCount}</span>}
                   </button>
 
                   {/* Edit categories button */}
@@ -602,14 +731,17 @@ export default function MyFoods() {
           onClose={() => setEditingCats(null)}
         />
       )}
-      {pairingFood && (
-        <PairingsModal
-          userFood={pairingFood}
+      {linksFood && (
+        <LinksModal
+          userFood={linksFood}
           myFoods={myFoods}
           pairings={pairings}
-          onAdd={handleAddPairing}
-          onRemove={handleRemovePairing}
-          onClose={() => setPairingFood(null)}
+          requirements={requirements}
+          onAddPairing={handleAddPairing}
+          onRemovePairing={handleRemovePairing}
+          onAddRequirement={handleAddRequirement}
+          onRemoveRequirement={handleRemoveRequirement}
+          onClose={() => setLinksFood(null)}
         />
       )}
     </div>

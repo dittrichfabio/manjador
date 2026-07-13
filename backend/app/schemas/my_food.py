@@ -41,3 +41,20 @@ class FoodPairingOut(BaseModel):
     added_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class FoodRequirementCreate(BaseModel):
+    food_id: int
+    required_food_id: int
+
+
+class FoodRequirementOut(BaseModel):
+    id: int
+    user_id: int
+    food_id: int
+    required_food_id: int
+    food: FoodOut
+    required_food: FoodOut
+    added_at: datetime
+
+    model_config = {"from_attributes": True}

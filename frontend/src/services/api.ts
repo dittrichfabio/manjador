@@ -1,7 +1,7 @@
 import axios from "axios";
 import type {
   User, UserProfile, Food, MealCategory, MealLog, DailySummary,
-  WeightLog, BodyMeasurement, MealPlan, UserFood, FoodPairing,
+  WeightLog, BodyMeasurement, MealPlan, UserFood, FoodPairing, FoodRequirement,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api", withCredentials: true });
@@ -134,3 +134,12 @@ export const addFoodPairing = (userId: number, data: { food_a_id: number; food_b
 
 export const removeFoodPairing = (userId: number, pairingId: number) =>
   api.delete(`/users/${userId}/my-foods/pairings/${pairingId}`);
+
+export const getMyFoodRequirements = (userId: number) =>
+  api.get<FoodRequirement[]>(`/users/${userId}/my-foods/requirements`).then(r => r.data);
+
+export const addFoodRequirement = (userId: number, data: { food_id: number; required_food_id: number }) =>
+  api.post<FoodRequirement>(`/users/${userId}/my-foods/requirements`, data).then(r => r.data);
+
+export const removeFoodRequirement = (userId: number, requirementId: number) =>
+  api.delete(`/users/${userId}/my-foods/requirements/${requirementId}`);

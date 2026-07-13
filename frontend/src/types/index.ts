@@ -165,3 +165,13 @@ export interface FoodPairing {
   food_b: Food;
   added_at: string;
 }
+
+export interface FoodRequirement {
+  id: number;
+  user_id: number;
+  food_id: number;
+  required_food_id: number;
+  food: Food;
+  required_food: Food;
+  added_at: string;
+}

@@ -7,10 +7,12 @@ from sqlalchemy.exc import IntegrityError
 from app.database import get_db
 from app.models.food import Food
 from app.models.meal import MealCategory
-from app.models.my_food import FoodPairing, UserFood, UserFoodCategory
+from app.models.my_food import FoodPairing, FoodRequirement, UserFood, UserFoodCategory
 from app.schemas.my_food import (
     FoodPairingCreate,
     FoodPairingOut,
+    FoodRequirementCreate,
+    FoodRequirementOut,
     UserFoodCreate,
     UserFoodOut,
     UserFoodUpdate,
@@ -176,4 +178,75 @@ def remove_pairing(user_id: int, pairing_id: int, db: Session = Depends(get_db))
     if not pairing:
         raise HTTPException(status_code=404, detail="Pairing not found")
     db.delete(pairing)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Requirements endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/users/{user_id}/my-foods/requirements", response_model=List[FoodRequirementOut])
+def list_requirements(user_id: int, db: Session = Depends(get_db)):
+    return (
+        db.query(FoodRequirement)
+        .filter(FoodRequirement.user_id == user_id)
+        .order_by(FoodRequirement.added_at.desc())
+        .all()
+    )
+
+
+@router.post("/users/{user_id}/my-foods/requirements", response_model=FoodRequirementOut, status_code=201)
+def add_requirement(user_id: int, payload: FoodRequirementCreate, db: Session = Depends(get_db)):
+    if payload.food_id == payload.required_food_id:
+        raise HTTPException(status_code=400, detail="A food cannot require itself")
+
+    for fid in (payload.food_id, payload.required_food_id):
+        exists = (
+            db.query(UserFood)
+            .filter(UserFood.user_id == user_id, UserFood.food_id == fid)
+            .first()
+        )
+        if not exists:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Food {fid} is not in your My Foods list",
+            )
+
+    existing = (
+        db.query(FoodRequirement)
+        .filter(
+            FoodRequirement.user_id == user_id,
+            FoodRequirement.food_id == payload.food_id,
+            FoodRequirement.required_food_id == payload.required_food_id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Requirement already exists")
+
+    req = FoodRequirement(
+        user_id=user_id,
+        food_id=payload.food_id,
+        required_food_id=payload.required_food_id,
+    )
+    db.add(req)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Requirement already exists")
+    db.refresh(req)
+    return req
+
+
+@router.delete("/users/{user_id}/my-foods/requirements/{requirement_id}", status_code=204)
+def remove_requirement(user_id: int, requirement_id: int, db: Session = Depends(get_db)):
+    req = (
+        db.query(FoodRequirement)
+        .filter(FoodRequirement.id == requirement_id, FoodRequirement.user_id == user_id)
+        .first()
+    )
+    if not req:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    db.delete(req)
     db.commit()

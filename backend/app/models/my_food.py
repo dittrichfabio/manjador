@@ -53,3 +53,20 @@ class FoodPairing(Base):
 
     food_a = relationship("Food", foreign_keys=[food_a_id])
     food_b = relationship("Food", foreign_keys=[food_b_id])
+
+
+class FoodRequirement(Base):
+    """Directional requirement: food_id always needs required_food_id (not mutual)."""
+    __tablename__ = "food_requirements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "food_id", "required_food_id", name="uq_food_requirement"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    food_id = Column(Integer, ForeignKey("foods.id", ondelete="CASCADE"), nullable=False)
+    required_food_id = Column(Integer, ForeignKey("foods.id", ondelete="CASCADE"), nullable=False)
+    added_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    food = relationship("Food", foreign_keys=[food_id])
+    required_food = relationship("Food", foreign_keys=[required_food_id])
