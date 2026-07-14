@@ -116,35 +116,121 @@ export interface BodyMeasurement {
   created_at: string;
 }
 
-export interface MealPlanItem {
+// ── Saved Meals ───────────────────────────────────────────────────────────────
+
+export interface SavedMealItem {
   id: number;
   food_id: number;
-  category_id: number;
   amount_g: number;
   food: Food;
-  category: MealCategory;
   calories: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
 }
 
-export interface MealPlan {
+export interface SavedMeal {
   id: number;
   user_id: number;
   name: string;
-  note?: string;
-  calorie_target: number;
-  protein_target_g?: number;
-  carbs_target_g?: number;
-  fat_target_g?: number;
-  items: MealPlanItem[];
+  calorie_goal: number;
+  meal_categories: MealCategory[];
+  items: SavedMealItem[];
   created_at: string;
   updated_at: string;
   total_calories: number;
   total_protein_g: number;
   total_carbs_g: number;
   total_fat_g: number;
+}
+
+export interface MealRecommendationItem {
+  food_id: number;
+  amount_g: number;
+}
+
+export interface MealRecommendation {
+  name: string;
+  items: MealRecommendationItem[];
+  estimated_calories: number;
+}
+
+export interface MealRecommendationsOut {
+  recommendations: MealRecommendation[];
+}
+
+// ── Daily Menus ───────────────────────────────────────────────────────────────
+
+export interface DailyMenuSlotItem {
+  id: number;
+  food_id: number;
+  amount_g: number;
+  food: Food;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+export interface DailyMenuSlot {
+  id: number;
+  menu_id: number;
+  category_id: number;
+  slot_index: number;
+  calorie_pct: number;
+  saved_meal_id?: number | null;
+  category: MealCategory;
+  saved_meal?: SavedMeal | null;
+  items: DailyMenuSlotItem[];
+  calorie_target: number;
+  total_calories: number;
+  total_protein_g: number;
+  total_carbs_g: number;
+  total_fat_g: number;
+}
+
+export interface DailyMenu {
+  id: number;
+  user_id: number;
+  name: string;
+  calorie_target: number;
+  slots: DailyMenuSlot[];
+  created_at: string;
+  updated_at: string;
+  total_calories: number;
+  total_protein_g: number;
+  total_carbs_g: number;
+  total_fat_g: number;
+}
+
+export interface DailyMenuRecommendationSlotItem {
+  food_id: number;
+  amount_g: number;
+}
+
+export interface DailyMenuRecommendationSlot {
+  category_id: number;
+  slot_index: number;
+  saved_meal_id?: number | null;
+  items: DailyMenuRecommendationSlotItem[];
+  estimated_calories: number;
+}
+
+export interface DailyMenuRecommendationOut {
+  slots: DailyMenuRecommendationSlot[];
+}
+
+// ── Weekly Menus ──────────────────────────────────────────────────────────────
+
+export interface WeeklyMenuDay {
+  day: number;
+  daily_menu: DailyMenu;
+}
+
+export interface WeeklyMenuOut {
+  days: WeeklyMenuDay[];
+  num_picks: number;
+  daily_menu_ids_used: number[];
 }
 
 export interface UserFood {

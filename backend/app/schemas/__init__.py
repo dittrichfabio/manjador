@@ -7,7 +7,8 @@ from app.schemas.meal import (
 )
 from app.schemas.weight import WeightLogCreate, WeightLogOut
 from app.schemas.measurement import BodyMeasurementCreate, BodyMeasurementOut
-from app.schemas.plan import MealPlanCreate, MealPlanUpdate, MealPlanOut, MealPlanItemCreate
+from app.schemas.saved_meal import SavedMealCreate, SavedMealUpdate, SavedMealOut, MealRecommendationsOut
+from app.schemas.daily_menu import DailyMenuCreate, DailyMenuUpdate, DailyMenuOut, WeeklyMenuOut
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserOut", "UserProfile",
@@ -15,5 +16,6 @@ __all__ = [
     "MealCategoryOut", "MealLogCreate", "MealLogOut", "MealLogItemCreate", "MealLogItemOut",
     "WeightLogCreate", "WeightLogOut",
     "BodyMeasurementCreate", "BodyMeasurementOut",
-    "MealPlanCreate", "MealPlanUpdate", "MealPlanOut", "MealPlanItemCreate",
+    "SavedMealCreate", "SavedMealUpdate", "SavedMealOut", "MealRecommendationsOut",
+    "DailyMenuCreate", "DailyMenuUpdate", "DailyMenuOut", "WeeklyMenuOut",
 ]

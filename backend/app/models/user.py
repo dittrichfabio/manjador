@@ -49,5 +49,6 @@ class User(Base):
     weight_logs = relationship("WeightLog", back_populates="user", cascade="all, delete-orphan")
     meal_logs = relationship("MealLog", back_populates="user", cascade="all, delete-orphan")
     body_measurements = relationship("BodyMeasurement", back_populates="user", cascade="all, delete-orphan")
-    meal_plans = relationship("MealPlan", back_populates="user", cascade="all, delete-orphan")
+    saved_meals = relationship("SavedMeal", back_populates="user", cascade="all, delete-orphan")
+    daily_menus = relationship("DailyMenu", back_populates="user", cascade="all, delete-orphan")
     my_foods = relationship("UserFood", back_populates="user", cascade="all, delete-orphan")

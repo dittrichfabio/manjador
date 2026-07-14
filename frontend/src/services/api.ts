@@ -1,7 +1,11 @@
 import axios from "axios";
 import type {
   User, UserProfile, Food, MealCategory, MealLog, DailySummary,
-  WeightLog, BodyMeasurement, MealPlan, UserFood, FoodPairing, FoodRequirement,
+  WeightLog, BodyMeasurement,
+  SavedMeal, MealRecommendationsOut,
+  DailyMenu, DailyMenuRecommendationOut,
+  WeeklyMenuOut,
+  UserFood, FoodPairing, FoodRequirement,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api", withCredentials: true });
@@ -76,19 +80,74 @@ export const createMeasurement = (
 export const deleteMeasurement = (userId: number, mId: number) =>
   api.delete(`/users/${userId}/measurements/${mId}`);
 
-export const getMealPlans = (userId: number) =>
-  api.get<MealPlan[]>(`/users/${userId}/plans`).then(r => r.data);
+// ── Saved Meals ────────────────────────────────────────────────────────────────
 
-export const createMealPlan = (
+export const getSavedMeals = (userId: number) =>
+  api.get<SavedMeal[]>(`/users/${userId}/saved-meals`).then(r => r.data);
+
+export const getSavedMeal = (userId: number, mealId: number) =>
+  api.get<SavedMeal>(`/users/${userId}/saved-meals/${mealId}`).then(r => r.data);
+
+export const createSavedMeal = (
   userId: number,
-  data: Omit<MealPlan, "id" | "user_id" | "created_at" | "updated_at" | "total_calories" | "total_protein_g" | "total_carbs_g" | "total_fat_g">
-) => api.post<MealPlan>(`/users/${userId}/plans`, data).then(r => r.data);
+  data: { name: string; calorie_goal: number; category_ids: number[]; items: { food_id: number; amount_g: number }[] }
+) => api.post<SavedMeal>(`/users/${userId}/saved-meals`, data).then(r => r.data);
 
-export const updateMealPlan = (userId: number, planId: number, data: Partial<MealPlan>) =>
-  api.patch<MealPlan>(`/users/${userId}/plans/${planId}`, data).then(r => r.data);
+export const updateSavedMeal = (
+  userId: number,
+  mealId: number,
+  data: { name?: string; calorie_goal?: number; category_ids?: number[]; items?: { food_id: number; amount_g: number }[] }
+) => api.patch<SavedMeal>(`/users/${userId}/saved-meals/${mealId}`, data).then(r => r.data);
 
-export const deleteMealPlan = (userId: number, planId: number) =>
-  api.delete(`/users/${userId}/plans/${planId}`);
+export const deleteSavedMeal = (userId: number, mealId: number) =>
+  api.delete(`/users/${userId}/saved-meals/${mealId}`);
+
+export const recommendSavedMeal = (
+  userId: number,
+  data: { category_ids: number[]; calorie_goal: number }
+) => api.post<MealRecommendationsOut>(`/users/${userId}/saved-meals/recommend`, data).then(r => r.data);
+
+// ── Daily Menus ────────────────────────────────────────────────────────────────
+
+export const getDailyMenus = (userId: number) =>
+  api.get<DailyMenu[]>(`/users/${userId}/daily-menus`).then(r => r.data);
+
+export const getDailyMenu = (userId: number, menuId: number) =>
+  api.get<DailyMenu>(`/users/${userId}/daily-menus/${menuId}`).then(r => r.data);
+
+export type SlotCreate = {
+  category_id: number;
+  slot_index: number;
+  calorie_pct: number;
+  saved_meal_id?: number | null;
+  items: { food_id: number; amount_g: number }[];
+};
+
+export const createDailyMenu = (
+  userId: number,
+  data: { name: string; calorie_target: number; slots: SlotCreate[] }
+) => api.post<DailyMenu>(`/users/${userId}/daily-menus`, data).then(r => r.data);
+
+export const updateDailyMenu = (
+  userId: number,
+  menuId: number,
+  data: { name?: string; calorie_target?: number; slots?: SlotCreate[] }
+) => api.patch<DailyMenu>(`/users/${userId}/daily-menus/${menuId}`, data).then(r => r.data);
+
+export const deleteDailyMenu = (userId: number, menuId: number) =>
+  api.delete(`/users/${userId}/daily-menus/${menuId}`);
+
+export const recommendDailyMenu = (
+  userId: number,
+  data: { calorie_target: number; slots: { category_id: number; slot_index: number; calorie_pct: number }[] }
+) => api.post<DailyMenuRecommendationOut>(`/users/${userId}/daily-menus/recommend`, data).then(r => r.data);
+
+// ── Weekly Menus ───────────────────────────────────────────────────────────────
+
+export const generateWeeklyMenu = (
+  userId: number,
+  data: { num_days: number; num_picks: number }
+) => api.post<WeeklyMenuOut>(`/users/${userId}/weekly-menus/generate`, data).then(r => r.data);
 
 export const exportWeights = (userId: number) =>
   window.open(`/api/users/${userId}/data/export/weights`);

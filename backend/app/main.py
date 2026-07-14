@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import users, weights, measurements, foods, meals, plans, data, my_foods
+from app.routers import users, weights, measurements, foods, meals, data, my_foods
+from app.routers import saved_meals, daily_menus, weekly_menus
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,32 @@ def _migrate_users_table():
         if "dashboard_show_nutrients" not in columns:
             logger.info("Adding dashboard_show_nutrients column to users table")
             conn.execute('ALTER TABLE users ADD COLUMN dashboard_show_nutrients VARCHAR DEFAULT \'["calories","protein","carbs","fat"]\'')
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _drop_old_plan_tables():
+    """
+    Drop the legacy meal_plans and meal_plan_items tables if they still exist.
+    These are replaced by saved_meals, daily_menus, and related tables.
+    """
+    from app.config import settings
+
+    db_path = settings.database_url.replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
+    try:
+        tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        if "meal_plan_items" in tables:
+            logger.info("Dropping legacy meal_plan_items table")
+            conn.execute("DROP TABLE meal_plan_items")
+            conn.commit()
+        if "meal_plans" in tables:
+            logger.info("Dropping legacy meal_plans table")
+            conn.execute("DROP TABLE meal_plans")
             conn.commit()
     except Exception:
         conn.rollback()
@@ -144,7 +171,9 @@ app.include_router(weights.router, prefix="/api")
 app.include_router(measurements.router, prefix="/api")
 app.include_router(foods.router, prefix="/api")
 app.include_router(meals.router, prefix="/api")
-app.include_router(plans.router, prefix="/api")
+app.include_router(saved_meals.router, prefix="/api")
+app.include_router(daily_menus.router, prefix="/api")
+app.include_router(weekly_menus.router, prefix="/api")
 app.include_router(data.router, prefix="/api")
 app.include_router(my_foods.router, prefix="/api")
 
@@ -158,6 +187,12 @@ def startup_event():
     # Migrate existing schema if needed
     _migrate_users_table()  # add dashboard preferences
     _migrate_foods_table()  # rename _per_100g → _per_serving, add iron
+    _drop_old_plan_tables()  # remove legacy meal_plans / meal_plan_items
+
+    # Ensure new models are imported so create_all sees them
+    import app.models.saved_meal  # noqa: F401
+    import app.models.daily_menu  # noqa: F401
+
     # Create all tables if they do not exist yet
     Base.metadata.create_all(bind=engine)
 

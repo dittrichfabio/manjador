@@ -84,3 +84,46 @@ async def extract_nutrition_from_image(image_path: str, mode: str = "label") -> 
     )
 
     return _parse_response(response.text)
+
+
+async def recommend_meal(context: dict) -> dict:
+    """
+    Generate 3 meal recommendations via Gemini.
+
+    context keys:
+        meal_categories  – str: comma-separated category names
+        calorie_goal     – float: target kcal for this meal
+        foods_list       – str: formatted list of available foods
+    Returns the parsed JSON dict with a "recommendations" key.
+    """
+    template = _load_prompt("meal_recommendation")
+    prompt = template.format(**context)
+    client = _get_client()
+    logger.info("Requesting meal recommendations from Gemini (model=%s)", settings.gemini_model)
+    response = client.models.generate_content(
+        model=settings.gemini_model,
+        contents=[prompt],
+    )
+    return _parse_response(response.text)
+
+
+async def recommend_daily_menu(context: dict) -> dict:
+    """
+    Generate a daily menu recommendation via Gemini.
+
+    context keys:
+        total_calories        – float: total daily calorie target
+        slots_description     – str: formatted description of each slot
+        saved_meals_list      – str: formatted list of user's saved meals
+        foods_by_category     – str: formatted foods grouped by category
+    Returns the parsed JSON dict with a "slots" key.
+    """
+    template = _load_prompt("daily_menu_recommendation")
+    prompt = template.format(**context)
+    client = _get_client()
+    logger.info("Requesting daily menu recommendation from Gemini (model=%s)", settings.gemini_model)
+    response = client.models.generate_content(
+        model=settings.gemini_model,
+        contents=[prompt],
+    )
+    return _parse_response(response.text)
