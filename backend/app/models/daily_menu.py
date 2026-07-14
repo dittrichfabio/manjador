@@ -15,7 +15,7 @@ class DailyMenuSlotItem(Base):
     amount_g = Column(Float, nullable=False)
 
     slot = relationship("DailyMenuSlot", back_populates="items")
-    food = relationship("Food")
+    food = relationship("Food", back_populates="daily_menu_slot_items")
 
 
 class DailyMenuSlot(Base):

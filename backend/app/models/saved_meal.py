@@ -27,7 +27,7 @@ class SavedMealItem(Base):
     amount_g = Column(Float, nullable=False)
 
     meal = relationship("SavedMeal", back_populates="items")
-    food = relationship("Food")
+    food = relationship("Food", back_populates="saved_meal_items")
 
 
 class SavedMeal(Base):

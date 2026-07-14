@@ -32,5 +32,6 @@ class Food(Base):
     # Relationships
     created_by_user = relationship("User", back_populates="foods", foreign_keys=[created_by])
     meal_log_items = relationship("MealLogItem", back_populates="food")
-    meal_plan_items = relationship("MealPlanItem", back_populates="food")
+    saved_meal_items = relationship("SavedMealItem", back_populates="food")
+    daily_menu_slot_items = relationship("DailyMenuSlotItem", back_populates="food")
     user_food_entries = relationship("UserFood", back_populates="food")
