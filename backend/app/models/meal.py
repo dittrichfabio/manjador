@@ -15,7 +15,6 @@ class MealCategory(Base):
     color = Column(String, default="#6366f1")
 
     meal_logs = relationship("MealLog", back_populates="category")
-    meal_plan_items = relationship("MealPlanItem", back_populates="category")
 
 
 class MealLog(Base):
